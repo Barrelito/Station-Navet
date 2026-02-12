@@ -8,7 +8,10 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as ideas from "../ideas.js";
+import type * as migrations from "../migrations.js";
+import type * as organizations from "../organizations.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 import type * as votes from "../votes.js";
@@ -20,7 +23,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   ideas: typeof ideas;
+  migrations: typeof migrations;
+  organizations: typeof organizations;
   tasks: typeof tasks;
   users: typeof users;
   votes: typeof votes;

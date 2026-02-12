@@ -9,7 +9,7 @@ import Link from "next/link";
 export default function AdminLayout({
     children,
 }: {
-    children: React.Node;
+    children: React.ReactNode;
 }) {
     const isAdmin = useQuery(api.admin.isAdmin);
     const router = useRouter();
