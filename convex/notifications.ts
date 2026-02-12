@@ -167,7 +167,7 @@ export const sendNotification = internalMutation({
 
             // Schemalägg push-notis (om användaren har prenumererat)
             // Vi gör detta asynkront via scheduler för att inte blockera
-            await ctx.scheduler.runAfter(0, internal.push.sendPushToUser, {
+            await ctx.scheduler.runAfter(0, internal.pushActions.sendPushToUser, {
                 userId,
                 title: args.title,
                 message: args.message,
