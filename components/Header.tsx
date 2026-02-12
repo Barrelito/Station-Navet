@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { UserButton } from "@clerk/nextjs";
+import { useMutation } from "convex/react";
+import { api } from "../convex/_generated/api";
 import StationSelector from "./StationSelector";
 
 /**
@@ -12,6 +15,18 @@ import StationSelector from "./StationSelector";
  * Glasmorfism-effekt med backdrop-blur för modern känsla.
  */
 export default function Header() {
+    const ensureUser = useMutation(api.users.ensureUserExists);
+
+    // Skapa user-post vid första inloggningen
+    useEffect(() => {
+        ensureUser().catch((err) => {
+            // Ignorera fel om användaren inte är inloggad
+            if (!err.message?.includes("Inte inloggad")) {
+                console.error("Kunde inte skapa användare:", err);
+            }
+        });
+    }, [ensureUser]);
+
     return (
         <>
             {/* StationSelector visas automatiskt om användaren saknar station */}

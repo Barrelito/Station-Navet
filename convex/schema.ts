@@ -8,7 +8,7 @@ export default defineSchema({
     tokenIdentifier: v.string(),
     name: v.string(),
     role: v.union(v.literal("user"), v.literal("manager")),
-    station: v.string(), // Obligatorisk - användaren tillhör en station
+    station: v.optional(v.string()), // Optional - tom vid första inloggning
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_station", ["station"]),

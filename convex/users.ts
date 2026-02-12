@@ -24,6 +24,40 @@ export const getCurrentUser = query({
 });
 
 /**
+ * ensureUserExists – Skapar en user-post om den inte finns.
+ * 
+ * Körs automatiskt vid första inloggningen från frontend.
+ */
+export const ensureUserExists = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Inte inloggad.");
+        }
+
+        const existing = await ctx.db
+            .query("users")
+            .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+            .unique();
+
+        if (existing) {
+            return existing._id;
+        }
+
+        // Skapa ny användare med tom station (triggar StationSelector)
+        const userId = await ctx.db.insert("users", {
+            tokenIdentifier: identity.tokenIdentifier,
+            name: identity.name ?? "Användare",
+            role: "user",
+            // station utelämnas (optional) - triggar StationSelector
+        });
+
+        return userId;
+    },
+});
+
+/**
  * updateUserStation – Uppdaterar användarens station.
  * 
  * Används vid första inloggningen via StationSelector-dialogen.
