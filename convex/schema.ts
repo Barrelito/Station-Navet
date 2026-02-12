@@ -1,8 +1,9 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+// ─── Schema för Station-Navet ───────────────────────────────
 export default defineSchema({
-  // ─── Användare ───────────────────────────────────────────────
+  // ─── Users ────────────────────────────────────────────────
   // Kopplas till Clerk via tokenIdentifier.
   users: defineTable({
     tokenIdentifier: v.string(),
@@ -11,12 +12,26 @@ export default defineSchema({
       v.literal("user"),
       v.literal("station_manager"),
       v.literal("area_manager"),
-      v.literal("region_manager")
+      v.literal("region_manager"),
+      v.literal("admin") // Full system access
     ),
     station: v.optional(v.string()), // Optional - tom vid första inloggning
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_station", ["station"]),
+
+  // ─── Organizations ────────────────────────────────────────
+  organizations: defineTable({
+    type: v.union(
+      v.literal("region"),
+      v.literal("area"),
+      v.literal("station")
+    ),
+    name: v.string(),
+    parentId: v.optional(v.id("organizations")), // null för regions
+  })
+    .index("by_type", ["type"])
+    .index("by_parent", ["parentId"]),
 
   // ─── Idéer ───────────────────────────────────────────────────
   // Kärnan i flödet: Idé → Intressekoll → Omröstning → Verkstad.
