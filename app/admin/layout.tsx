@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 
 export default function AdminLayout({
     children,
@@ -49,12 +50,17 @@ export default function AdminLayout({
                             <h1 className="text-3xl font-bold">⚙️ Admin Dashboard</h1>
                             <p className="text-purple-100 mt-1">Hantera användare och organisationsstruktur</p>
                         </div>
-                        <Link
-                            href="/"
-                            className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                        >
-                            ← Tillbaka till appen
-                        </Link>
+                        <div className="flex items-center gap-4">
+                            <Link
+                                href="/"
+                                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium"
+                            >
+                                ← Tillbaka till appen
+                            </Link>
+                            <div className="scale-110">
+                                <UserButton afterSignOutUrl="/" />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
