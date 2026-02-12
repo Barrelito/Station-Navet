@@ -10,6 +10,7 @@
 
 import type * as ideas from "../ideas.js";
 import type * as tasks from "../tasks.js";
+import type * as users from "../users.js";
 import type * as votes from "../votes.js";
 
 import type {
@@ -21,6 +22,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   ideas: typeof ideas;
   tasks: typeof tasks;
+  users: typeof users;
   votes: typeof votes;
 }>;
 
