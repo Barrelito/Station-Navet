@@ -10,8 +10,11 @@ export default function AdminUsersPage() {
     const organizations = useQuery(api.organizations.getOrganizations);
     const updateRole = useMutation(api.admin.updateUserRole);
     const updateStation = useMutation(api.admin.updateUserStation);
+    const updateArea = useMutation(api.admin.updateUserArea);
+    const updateRegion = useMutation(api.admin.updateUserRegion);
 
     const [editingUser, setEditingUser] = useState<Id<"users"> | null>(null);
+    const [editingField, setEditingField] = useState<"station" | "area" | "region" | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
 
     if (!users || !organizations) {
@@ -29,9 +32,17 @@ export default function AdminUsersPage() {
         user.station?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Hämta alla stationer för dropdown
+    // Hämta organisationer per typ
     const stations = organizations
         .filter((org) => org.type === "station")
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    const areas = organizations
+        .filter((org) => org.type === "area")
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    const regions = organizations
+        .filter((org) => org.type === "region")
         .sort((a, b) => a.name.localeCompare(b.name));
 
     const handleRoleChange = async (userId: Id<"users">, newRole: string) => {
@@ -52,34 +63,40 @@ export default function AdminUsersPage() {
                 userId,
                 stationName: newStation,
             });
+            setEditingUser(null);
+            setEditingField(null);
         } catch (error) {
             console.error("Kunde inte uppdatera station:", error);
             alert("Något gick fel vid uppdatering av station.");
         }
     };
 
-    const getRoleBadge = (role: string) => {
-        const styles = {
-            user: "bg-slate-100 text-slate-700",
-            station_manager: "bg-blue-100 text-blue-700",
-            area_manager: "bg-purple-100 text-purple-700",
-            region_manager: "bg-pink-100 text-pink-700",
-            admin: "bg-red-100 text-red-700",
-        };
+    const handleAreaChange = async (userId: Id<"users">, newArea: string) => {
+        try {
+            await updateArea({
+                userId,
+                areaName: newArea,
+            });
+            setEditingUser(null);
+            setEditingField(null);
+        } catch (error) {
+            console.error("Kunde inte uppdatera område:", error);
+            alert("Något gick fel vid uppdatering av område.");
+        }
+    };
 
-        const labels = {
-            user: "Användare",
-            station_manager: "Stationschef",
-            area_manager: "Områdeschef",
-            region_manager: "Regionchef",
-            admin: "Admin",
-        };
-
-        return (
-            <span className={`px-2 py-1 rounded text-xs font-medium ${styles[role as keyof typeof styles] || styles.user}`}>
-                {labels[role as keyof typeof labels] || role}
-            </span>
-        );
+    const handleRegionChange = async (userId: Id<"users">, newRegion: string) => {
+        try {
+            await updateRegion({
+                userId,
+                regionName: newRegion,
+            });
+            setEditingUser(null);
+            setEditingField(null);
+        } catch (error) {
+            console.error("Kunde inte uppdatera region:", error);
+            alert("Något gick fel vid uppdatering av region.");
+        }
     };
 
     return (
@@ -88,7 +105,7 @@ export default function AdminUsersPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">Användarhantering</h2>
-                    <p className="text-slate-600 mt-1">Hantera roller och stationstilldelningar</p>
+                    <p className="text-slate-600 mt-1">Hantera roller och tilldelningar</p>
                 </div>
                 <div className="text-sm text-slate-500">
                     {filteredUsers.length} användare
@@ -115,13 +132,10 @@ export default function AdminUsersPage() {
                                 Namn
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                Station
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                Område / Region
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                                 Roll
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Tilldelning
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                                 Åtgärder
@@ -129,62 +143,126 @@ export default function AdminUsersPage() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                        {filteredUsers.map((user) => (
-                            <tr key={user._id} className="hover:bg-slate-50">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-slate-900">{user.name}</div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    {editingUser === user._id ? (
+                        {filteredUsers.map((user) => {
+                            const isEditing = editingUser === user._id;
+
+                            return (
+                                <tr key={user._id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-slate-900">{user.name}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
                                         <select
-                                            value={user.station || ""}
-                                            onChange={(e) => {
-                                                handleStationChange(user._id, e.target.value);
-                                                setEditingUser(null);
-                                            }}
+                                            value={user.role}
+                                            onChange={(e) => handleRoleChange(user._id, e.target.value)}
                                             className="text-sm border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
-                                            <option value="">Välj station...</option>
-                                            {stations.map((station) => (
-                                                <option key={station._id} value={station.name}>
-                                                    {station.name}
-                                                </option>
-                                            ))}
+                                            <option value="user">Användare</option>
+                                            <option value="station_manager">Stationschef</option>
+                                            <option value="area_manager">Områdeschef</option>
+                                            <option value="region_manager">Regionchef</option>
+                                            <option value="admin">Admin</option>
                                         </select>
-                                    ) : (
-                                        <div className="text-sm text-slate-900">
-                                            {user.station || <span className="text-slate-400 italic">Ingen station</span>}
-                                        </div>
-                                    )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-slate-600">
-                                        {user.stationInfo?.area || "-"} / {user.stationInfo?.region || "-"}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <select
-                                        value={user.role}
-                                        onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                                        className="text-sm border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="user">Användare</option>
-                                        <option value="station_manager">Stationschef</option>
-                                        <option value="area_manager">Områdeschef</option>
-                                        <option value="region_manager">Regionchef</option>
-                                        <option value="admin">Admin</option>
-                                    </select>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                    <button
-                                        onClick={() => setEditingUser(user._id)}
-                                        className="text-blue-600 hover:text-blue-800 font-medium"
-                                    >
-                                        Ändra station
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {/* Station (för user & station_manager) */}
+                                        {(user.role === "user" || user.role === "station_manager") && (
+                                            isEditing && editingField === "station" ? (
+                                                <select
+                                                    value={user.station || ""}
+                                                    onChange={(e) => handleStationChange(user._id, e.target.value)}
+                                                    className="text-sm border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    autoFocus
+                                                >
+                                                    <option value="">Välj station...</option>
+                                                    {stations.map((station) => (
+                                                        <option key={station._id} value={station.name}>
+                                                            {station.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <div className="text-sm text-slate-900">
+                                                    🏠 {user.station || <span className="text-slate-400 italic">Ingen station</span>}
+                                                </div>
+                                            )
+                                        )}
+
+                                        {/* Område (för area_manager) */}
+                                        {user.role === "area_manager" && (
+                                            isEditing && editingField === "area" ? (
+                                                <select
+                                                    value={user.area || ""}
+                                                    onChange={(e) => handleAreaChange(user._id, e.target.value)}
+                                                    className="text-sm border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    autoFocus
+                                                >
+                                                    <option value="">Välj område...</option>
+                                                    {areas.map((area) => (
+                                                        <option key={area._id} value={area.name}>
+                                                            {area.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <div className="text-sm text-slate-900">
+                                                    🗺️ {user.area || <span className="text-slate-400 italic">Inget område</span>}
+                                                </div>
+                                            )
+                                        )}
+
+                                        {/* Region (för region_manager) */}
+                                        {user.role === "region_manager" && (
+                                            isEditing && editingField === "region" ? (
+                                                <select
+                                                    value={user.region || ""}
+                                                    onChange={(e) => handleRegionChange(user._id, e.target.value)}
+                                                    className="text-sm border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    autoFocus
+                                                >
+                                                    <option value="">Välj region...</option>
+                                                    {regions.map((region) => (
+                                                        <option key={region._id} value={region.name}>
+                                                            {region.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <div className="text-sm text-slate-900">
+                                                    🌍 {user.region || <span className="text-slate-400 italic">Ingen region</span>}
+                                                </div>
+                                            )
+                                        )}
+
+                                        {/* Admin - ingen tilldelning */}
+                                        {user.role === "admin" && (
+                                            <div className="text-sm text-slate-400 italic">
+                                                Full systemåtkomst
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                        {user.role !== "admin" && (
+                                            <button
+                                                onClick={() => {
+                                                    setEditingUser(user._id);
+                                                    if (user.role === "area_manager") {
+                                                        setEditingField("area");
+                                                    } else if (user.role === "region_manager") {
+                                                        setEditingField("region");
+                                                    } else {
+                                                        setEditingField("station");
+                                                    }
+                                                }}
+                                                className="text-blue-600 hover:text-blue-800 font-medium"
+                                            >
+                                                Ändra tilldelning
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

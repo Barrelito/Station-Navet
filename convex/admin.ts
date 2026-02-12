@@ -154,3 +154,71 @@ export const updateUserStation = mutation({
         return args.userId;
     },
 });
+
+/**
+ * updateUserArea – Uppdaterar en användares område (för area_manager).
+ */
+export const updateUserArea = mutation({
+    args: {
+        userId: v.id("users"),
+        areaName: v.string(),
+    },
+    handler: async (ctx, args) => {
+        await requireAdmin(ctx);
+
+        // Validera att området finns
+        const area = await ctx.db
+            .query("organizations")
+            .filter((q) =>
+                q.and(
+                    q.eq(q.field("type"), "area"),
+                    q.eq(q.field("name"), args.areaName)
+                )
+            )
+            .first();
+
+        if (!area) {
+            throw new Error(`Område "${args.areaName}" hittades inte.`);
+        }
+
+        await ctx.db.patch(args.userId, {
+            area: args.areaName,
+        });
+
+        return args.userId;
+    },
+});
+
+/**
+ * updateUserRegion – Uppdaterar en användares region (för region_manager).
+ */
+export const updateUserRegion = mutation({
+    args: {
+        userId: v.id("users"),
+        regionName: v.string(),
+    },
+    handler: async (ctx, args) => {
+        await requireAdmin(ctx);
+
+        // Validera att regionen finns
+        const region = await ctx.db
+            .query("organizations")
+            .filter((q) =>
+                q.and(
+                    q.eq(q.field("type"), "region"),
+                    q.eq(q.field("name"), args.regionName)
+                )
+            )
+            .first();
+
+        if (!region) {
+            throw new Error(`Region "${args.regionName}" hittades inte.`);
+        }
+
+        await ctx.db.patch(args.userId, {
+            region: args.regionName,
+        });
+
+        return args.userId;
+    },
+});

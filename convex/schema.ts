@@ -16,6 +16,8 @@ export default defineSchema({
       v.literal("admin") // Full system access
     ),
     station: v.optional(v.string()), // Optional - tom vid första inloggning
+    area: v.optional(v.string()),    // För area_manager - direkt tilldelat område
+    region: v.optional(v.string()),  // För region_manager - direkt tilldelad region
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_station", ["station"]),
