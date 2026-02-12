@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { getStationArea, getRegion } from "../lib/org-structure";
+import { getStationArea, getRegion, getStationsInArea } from "../lib/org-structure";
 
 /**
  * IdeaForm – "Idé-dumpen"
@@ -262,30 +262,49 @@ export default function IdeaForm() {
                     </div>
                 )}
 
-                {currentUser?.role === "area_manager" && (
-                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-5">
-                        <div className="flex items-center gap-3 mb-1">
-                            <span className="text-2xl">🎯</span>
-                            <h2 className="text-xl font-bold text-slate-800">
-                                Vem gäller detta?
-                            </h2>
-                        </div>
-                        <p className="text-sm text-slate-500 -mt-2">
-                            Som områdeschef postar du till hela ditt område.
-                        </p>
+                {currentUser?.role === "area_manager" && (() => {
+                    const userArea = currentUser.area || getStationArea(currentUser.station || "");
+                    const stationsInArea = userArea ? getStationsInArea(userArea) : [];
 
-                        <div className="space-y-2">
-                            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-                                <p className="text-sm font-medium text-blue-800">
-                                    🗺️ Hela området ({(() => {
-                                        const area = getStationArea(currentUser.station || "");
-                                        return area || "Okänt område";
-                                    })()})
-                                </p>
+                    return (
+                        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-5">
+                            <div className="flex items-center gap-3 mb-1">
+                                <span className="text-2xl">🎯</span>
+                                <h2 className="text-xl font-bold text-slate-800">
+                                    Vem gäller detta?
+                                </h2>
+                            </div>
+                            <p className="text-sm text-slate-500 -mt-2">
+                                Som områdeschef kan du välja om idén gäller hela området eller en specifik station.
+                            </p>
+
+                            <div className="space-y-2">
+                                <label htmlFor="targetAudience" className="text-sm font-medium text-slate-700">
+                                    Målgrupp
+                                </label>
+                                <select
+                                    id="targetAudience"
+                                    value={targetAudience || userArea || ""}
+                                    onChange={(e) => setTargetAudience(e.target.value)}
+                                    disabled={isSubmitting}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm
+                                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                         disabled:opacity-50 disabled:cursor-not-allowed
+                                         transition-all duration-200"
+                                >
+                                    <option value={userArea || ""}>
+                                        🗺️ Hela området ({userArea})
+                                    </option>
+                                    {stationsInArea.map((station: string) => (
+                                        <option key={station} value={station}>
+                                            🏠 {station}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {currentUser?.role === "region_manager" && (
                     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-5">

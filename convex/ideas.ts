@@ -151,15 +151,22 @@ export const submitIdea = mutation({
                 );
             }
         } else if (user.role === "area_manager") {
-            // Områdeschefer får bara posta till sitt område
-            if (!userArea) {
+            // Områdeschefer får posta till sitt område ELLER till enskilda stationer i området
+            const actualUserArea = user.area || userArea;
+            if (!actualUserArea) {
                 throw new Error("Kunde inte hitta ditt område.");
             }
-            validTargets.push(userArea);
 
-            if (args.targetAudience !== userArea) {
+            // Tillåt området själv
+            validTargets.push(actualUserArea);
+
+            // Tillåt alla stationer i området
+            const stationsInArea = getStationsInArea(actualUserArea);
+            validTargets.push(...stationsInArea);
+
+            if (!validTargets.includes(args.targetAudience)) {
                 throw new Error(
-                    `Som områdeschef kan du bara posta till ditt område (${userArea}).`
+                    `Som områdeschef kan du bara posta till ditt område (${actualUserArea}) eller till stationer inom området.`
                 );
             }
         } else if (user.role === "region_manager") {
