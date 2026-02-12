@@ -110,4 +110,30 @@ export default defineSchema({
   })
     .index("by_idea", ["ideaId"])
     .index("by_owner", ["ownerId"]),
+
+  // ─── Notifieringar (In-App) ──────────────────────────────────
+  notifications: defineTable({
+    userId: v.id("users"),        // Vem ska ha notisen?
+    type: v.string(),             // "new_idea", "vote", "comment", "status_change"
+    title: v.string(),            // Rubrik
+    message: v.string(),          // Meddelandetext
+    link: v.string(),             // Länk till relevant sida
+    relatedId: v.optional(v.string()), // ID på idé/kommentar etc.
+    isRead: v.boolean(),
+    isArchived: v.boolean(),
+  })
+    .index("by_user", ["userId", "isArchived"])       // För att hämta alla (arkiverade eller ej)
+    .index("by_user_unread", ["userId", "isRead"]),   // För att räkna/visa olästa
+
+  // ─── Push Notiser ────────────────────────────────────────────
+  pushSubscriptions: defineTable({
+    userId: v.id("users"),
+    endpoint: v.string(),
+    keys: v.object({
+      p256dh: v.string(),
+      auth: v.string()
+    }),
+  })
+    .index("by_user", ["userId"])
+    .index("by_endpoint", ["endpoint"]), // För att undvika dubbletter
 });

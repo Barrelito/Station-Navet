@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import {
     getStationArea,
@@ -243,6 +244,53 @@ export const submitIdea = mutation({
             targetAudience: validatedTargetAudience,
             scope,
         });
+
+        // ── 6. Skicka notiser ─────────────────────────────────────
+        // Vi måste hitta vilka som ska få notisen.
+        // För MVP: Skicka till ALLA i hela scopet.
+        // Hitta användare som matchar scopet.
+
+        // Detta kan vara tungt om det är många användare, så vi gör det i en internal mutation
+        // eller schemalägger det (scheduler). För nu, gör vi en enkel query här.
+        // OBS: Detta skalar inte för 1000-tals användare direkt här, men funkar för MVP.
+
+        let usersToNotify = await ctx.db.query("users").collect(); // Borde filtreras mer effektivt
+
+        usersToNotify = usersToNotify.filter(u => {
+            if (u._id === user._id) return false; // Inte till sig själv
+
+            // Kolla om användaren "hör till" målgruppen
+            const uArea = getStationArea(u.station || "");
+            const uRegion = getRegion(u.station || "");
+
+            // Om idén är för en station:
+            if (scope === "station") {
+                return u.station === validatedTargetAudience;
+            }
+            // Om idén är för ett område:
+            if (scope === "area") {
+                return uArea === validatedTargetAudience; // De i området
+                // (Eller stationer i området - vilket uArea täcker om vi har rätt logik)
+            }
+            // Om idén är för en region:
+            if (scope === "region") {
+                return uRegion === validatedTargetAudience;
+            }
+            return false;
+        });
+
+        const userIdsToNotify = usersToNotify.map(u => u._id);
+
+        if (userIdsToNotify.length > 0) {
+            await ctx.scheduler.runAfter(0, internal.notifications.sendNotification, {
+                userIds: userIdsToNotify,
+                type: "new_idea",
+                title: `Ny idé för ${validatedTargetAudience}!`,
+                message: `${user.name} har föreslagit: "${args.title}"`,
+                link: "/", // Länk till startsidan där feeden finns
+                relatedId: ideaId,
+            });
+        }
 
         return ideaId;
     },

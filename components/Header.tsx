@@ -5,6 +5,7 @@ import { UserButton } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import StationSelector from "./StationSelector";
+import NotificationBell from "./NotificationBell";
 
 /**
  * Header – Sticky app-header i "native app"-stil.
@@ -56,15 +57,19 @@ export default function Header() {
                         </div>
                     </div>
 
-                    {/* ── Höger: Clerk UserButton ──────────────────────── */}
-                    <UserButton
-                        afterSignOutUrl="/sign-in"
-                        appearance={{
-                            elements: {
-                                avatarBox: "w-9 h-9",
-                            },
-                        }}
-                    />
+                    {/* ── Höger: Notiser + Clerk UserButton ──────────────────────── */}
+                    <div className="flex items-center gap-2">
+                        <NotificationBell />
+
+                        <UserButton
+                            afterSignOutUrl="/sign-in"
+                            appearance={{
+                                elements: {
+                                    avatarBox: "w-9 h-9",
+                                },
+                            }}
+                        />
+                    </div>
                 </div>
             </header>
         </>
