@@ -7,7 +7,12 @@ export default defineSchema({
   users: defineTable({
     tokenIdentifier: v.string(),
     name: v.string(),
-    role: v.union(v.literal("user"), v.literal("manager")),
+    role: v.union(
+      v.literal("user"),
+      v.literal("station_manager"),
+      v.literal("area_manager"),
+      v.literal("region_manager")
+    ),
     station: v.optional(v.string()), // Optional - tom vid första inloggning
   })
     .index("by_token", ["tokenIdentifier"])

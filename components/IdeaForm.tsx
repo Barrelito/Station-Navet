@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { getStationArea } from "../lib/org-structure";
+import { getStationArea, getRegion } from "../lib/org-structure";
 
 /**
  * IdeaForm – "Idé-dumpen"
@@ -38,8 +38,20 @@ export default function IdeaForm() {
         setIsSubmitting(true);
 
         try {
-            // Sätt default targetAudience till användarens station om ej satt
-            const finalTargetAudience = targetAudience || currentUser?.station || "";
+            // Sätt default targetAudience baserat på roll
+            let finalTargetAudience = targetAudience || currentUser?.station || "";
+
+            // För area_manager: default till område
+            if (currentUser?.role === "area_manager" && !targetAudience) {
+                const area = getStationArea(currentUser.station || "");
+                finalTargetAudience = area || currentUser.station || "";
+            }
+
+            // För region_manager: default till region
+            if (currentUser?.role === "region_manager" && !targetAudience) {
+                const region = getRegion(currentUser.station || "");
+                finalTargetAudience = region || currentUser.station || "";
+            }
 
             await submitIdea({
                 title,
@@ -208,7 +220,7 @@ export default function IdeaForm() {
                 </div>
 
                 {/* ── Sektion 4: Målgrupp (endast managers) ─────────── */}
-                {currentUser?.role === "manager" && (
+                {currentUser?.role === "station_manager" && (
                     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-5">
                         <div className="flex items-center gap-3 mb-1">
                             <span className="text-2xl">🎯</span>
@@ -217,7 +229,7 @@ export default function IdeaForm() {
                             </h2>
                         </div>
                         <p className="text-sm text-slate-500 -mt-2">
-                            Som chef kan du välja om idén gäller bara din station eller hela området.
+                            Som stationschef kan du välja om idén gäller bara din station eller hela området.
                         </p>
 
                         <div className="space-y-2">
@@ -238,17 +250,64 @@ export default function IdeaForm() {
                                     🏠 Min station ({currentUser.station})
                                 </option>
                                 {(() => {
-                                    const userArea = getStationArea(currentUser.station);
-                                    if (userArea) {
-                                        return (
-                                            <option value={userArea}>
-                                                🗺️ Hela området ({userArea})
-                                            </option>
-                                        );
-                                    }
-                                    return null;
+                                    const area = getStationArea(currentUser.station || "");
+                                    return area ? (
+                                        <option value={area}>
+                                            🗺️ Hela området ({area})
+                                        </option>
+                                    ) : null;
                                 })()}
                             </select>
+                        </div>
+                    </div>
+                )}
+
+                {currentUser?.role === "area_manager" && (
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-5">
+                        <div className="flex items-center gap-3 mb-1">
+                            <span className="text-2xl">🎯</span>
+                            <h2 className="text-xl font-bold text-slate-800">
+                                Vem gäller detta?
+                            </h2>
+                        </div>
+                        <p className="text-sm text-slate-500 -mt-2">
+                            Som områdeschef postar du till hela ditt område.
+                        </p>
+
+                        <div className="space-y-2">
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                                <p className="text-sm font-medium text-blue-800">
+                                    🗺️ Hela området ({(() => {
+                                        const area = getStationArea(currentUser.station || "");
+                                        return area || "Okänt område";
+                                    })()})
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {currentUser?.role === "region_manager" && (
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-5">
+                        <div className="flex items-center gap-3 mb-1">
+                            <span className="text-2xl">🎯</span>
+                            <h2 className="text-xl font-bold text-slate-800">
+                                Vem gäller detta?
+                            </h2>
+                        </div>
+                        <p className="text-sm text-slate-500 -mt-2">
+                            Som regionchef postar du till hela din region.
+                        </p>
+
+                        <div className="space-y-2">
+                            <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3">
+                                <p className="text-sm font-medium text-purple-800">
+                                    🌍 Hela regionen ({(() => {
+                                        const region = getRegion(currentUser.station || "");
+                                        return region || "Okänd region";
+                                    })()})
+                                </p>
+                            </div>
                         </div>
                     </div>
                 )}

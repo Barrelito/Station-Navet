@@ -5,6 +5,9 @@ import {
     getRegion,
     getAllStations,
     getAllAreas,
+    getStationsInArea,
+    getAllStationsInRegion,
+    getAllAreasInRegion,
 } from "../lib/org-structure";
 
 // ─── Statuskonstanter som INTE ska visas i feeden ──────────
@@ -49,6 +52,20 @@ export const getIdeas = query({
         const allowedTargets = [userStation];
         if (userArea) allowedTargets.push(userArea);
         if (userRegion) allowedTargets.push(userRegion);
+
+        // ── 2b. Utöka synlighet för area/region managers ─────────
+        // Area managers ser alla stationer i sitt område
+        if (user.role === "area_manager" && userArea) {
+            const stationsInArea = getStationsInArea(userArea);
+            allowedTargets.push(...stationsInArea);
+        }
+
+        // Region managers ser alla stationer och områden i sin region
+        if (user.role === "region_manager" && userRegion) {
+            const allStationsInRegion = getAllStationsInRegion(userRegion);
+            const allAreasInRegion = getAllAreasInRegion(userRegion);
+            allowedTargets.push(...allStationsInRegion, ...allAreasInRegion);
+        }
 
         // ── 3. Hämta alla idéer ────────────────────────────────────
         const allIdeas = await ctx.db
@@ -115,21 +132,46 @@ export const submitIdea = mutation({
         // ── 3. Validera targetAudience baserat på roll ────────────
         let validatedTargetAudience = args.targetAudience;
         const userArea = getStationArea(user.station);
+        const userRegion = getRegion(user.station);
+
+        const validTargets: string[] = [];
 
         if (user.role === "user") {
             // Vanliga användare får bara posta till sin egen station
             validatedTargetAudience = user.station;
-        } else if (user.role === "manager") {
-            // Chefer får välja mellan sin station eller sitt område
-            const validTargets = [user.station];
-            if (userArea) {
-                validTargets.push(userArea);
-            }
+        } else if (user.role === "station_manager") {
+            // Stationschefer får välja mellan sin station eller sitt område
+            validTargets.push(user.station);
+            if (userArea) validTargets.push(userArea);
 
             if (!validTargets.includes(args.targetAudience)) {
                 throw new Error(
-                    `Som chef kan du bara posta till din station (${user.station})${userArea ? ` eller ditt område (${userArea})` : ""
+                    `Som stationschef kan du bara posta till din station (${user.station})${userArea ? ` eller ditt område (${userArea})` : ""
                     }.`
+                );
+            }
+        } else if (user.role === "area_manager") {
+            // Områdeschefer får bara posta till sitt område
+            if (!userArea) {
+                throw new Error("Kunde inte hitta ditt område.");
+            }
+            validTargets.push(userArea);
+
+            if (args.targetAudience !== userArea) {
+                throw new Error(
+                    `Som områdeschef kan du bara posta till ditt område (${userArea}).`
+                );
+            }
+        } else if (user.role === "region_manager") {
+            // Regionchefer får bara posta till sin region
+            if (!userRegion) {
+                throw new Error("Kunde inte hitta din region.");
+            }
+            validTargets.push(userRegion);
+
+            if (args.targetAudience !== userRegion) {
+                throw new Error(
+                    `Som regionchef kan du bara posta till din region (${userRegion}).`
                 );
             }
         } else {

@@ -160,3 +160,30 @@ export function isValidArea(area: Area): boolean {
 export function isValidRegion(region: Region): boolean {
     return getAllRegions().includes(region);
 }
+
+/**
+ * getAllStationsInRegion – Returnerar alla stationer inom en region.
+ * 
+ * @param region - Namnet på regionen (t.ex. "Nord")
+ * @returns Array med alla stationsnamn i regionen
+ */
+export function getAllStationsInRegion(region: string): string[] {
+    const regionData = orgStructure.find((r) => r.name === region);
+    if (!regionData) return [];
+
+    return regionData.areas.flatMap((area) => area.stations);
+}
+
+/**
+ * getAllAreasInRegion – Returnerar alla stationsområden inom en region.
+ * 
+ * @param region - Namnet på regionen (t.ex. "Nord")
+ * @returns Array med alla områdesnamn i regionen
+ */
+export function getAllAreasInRegion(region: string): string[] {
+    const regionData = orgStructure.find((r) => r.name === region);
+    if (!regionData) return [];
+
+    return regionData.areas.map((area) => area.name);
+}
+
