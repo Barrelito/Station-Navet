@@ -80,6 +80,8 @@ type Idea = {
     resourceNeeds: string;
     status: string;
     votesCount: number;
+    targetAudience: string; // T.ex. "Norrtälje", "Roslagen", "Nord"
+    scope: string;          // "station", "area", eller "region"
 };
 
 // ─── Status-badge ─────────────────────────────────────────────
@@ -121,6 +123,37 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 
+// ─── Scope-badge ───────────────────────────────────────────────
+function ScopeBadge({ scope, targetAudience }: { scope: string; targetAudience: string }) {
+    const config: Record<string, { icon: string; style: string; prefix: string }> = {
+        station: {
+            icon: "🏠",
+            style: "bg-slate-100 text-slate-700 border-slate-300",
+            prefix: "",
+        },
+        area: {
+            icon: "🗺️",
+            style: "bg-blue-100 text-blue-700 border-blue-300",
+            prefix: "Hela ",
+        },
+        region: {
+            icon: "🌍",
+            style: "bg-purple-100 text-purple-700 border-purple-300",
+            prefix: "Region ",
+        },
+    };
+
+    const { icon, style, prefix } = config[scope] ?? config["station"];
+
+    return (
+        <span
+            className={`inline-block text-xs font-semibold px-3 py-1 rounded-full border ${style}`}
+        >
+            {icon} {prefix}{targetAudience}
+        </span>
+    );
+}
+
 // ─── Idékort ──────────────────────────────────────────────────
 function IdeaCard({
     idea,
@@ -156,7 +189,10 @@ function IdeaCard({
                     <h3 className="text-lg font-bold text-slate-800 leading-snug">
                         {idea.title}
                     </h3>
-                    <StatusBadge status={idea.status} />
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <ScopeBadge scope={idea.scope} targetAudience={idea.targetAudience} />
+                        <StatusBadge status={idea.status} />
+                    </div>
                 </div>
 
                 <p className="text-slate-600 text-sm leading-relaxed">

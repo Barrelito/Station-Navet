@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { getStationArea } from "../lib/org-structure";
 
 /**
  * IdeaForm – "Idé-dumpen"
@@ -13,11 +14,18 @@ import { api } from "../convex/_generated/api";
  * Mobile First · Tailwind CSS · Shadcn UI-tänk
  */
 export default function IdeaForm() {
+    // ── Hämta current user ─────────────────────────────────────
+    const currentUser = useQuery(api.users.getCurrentUser);
+
     // ── Formulärstate ───────────────────────────────────────────
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [perfectState, setPerfectState] = useState("");
     const [resourceNeeds, setResourceNeeds] = useState("");
+
+    // ── Nytt: targetAudience state ──────────────────────────────
+    // Default till användarens station när den laddats
+    const [targetAudience, setTargetAudience] = useState<string>("");
 
     // ── Mutations & UI-state ────────────────────────────────────
     const submitIdea = useMutation(api.ideas.submitIdea);
@@ -30,13 +38,25 @@ export default function IdeaForm() {
         setIsSubmitting(true);
 
         try {
-            await submitIdea({ title, description, perfectState, resourceNeeds });
+            // Sätt default targetAudience till användarens station om ej satt
+            const finalTargetAudience = targetAudience || currentUser?.station || "";
+
+            await submitIdea({
+                title,
+                description,
+                perfectState,
+                resourceNeeds,
+                targetAudience: finalTargetAudience,
+            });
 
             // Rensa formuläret
             setTitle("");
             setDescription("");
             setPerfectState("");
             setResourceNeeds("");
+            if (currentUser?.station) {
+                setTargetAudience(currentUser.station); // Reset till default
+            }
 
             // Visa success
             setShowSuccess(true);
@@ -186,6 +206,52 @@ export default function IdeaForm() {
                         />
                     </div>
                 </div>
+
+                {/* ── Sektion 4: Målgrupp (endast managers) ─────────── */}
+                {currentUser?.role === "manager" && (
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-5">
+                        <div className="flex items-center gap-3 mb-1">
+                            <span className="text-2xl">🎯</span>
+                            <h2 className="text-xl font-bold text-slate-800">
+                                Vem gäller detta?
+                            </h2>
+                        </div>
+                        <p className="text-sm text-slate-500 -mt-2">
+                            Som chef kan du välja om idén gäller bara din station eller hela området.
+                        </p>
+
+                        <div className="space-y-2">
+                            <label htmlFor="targetAudience" className="text-sm font-medium text-slate-700">
+                                Målgrupp
+                            </label>
+                            <select
+                                id="targetAudience"
+                                value={targetAudience || currentUser.station}
+                                onChange={(e) => setTargetAudience(e.target.value)}
+                                disabled={isSubmitting}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm
+                                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                     disabled:opacity-50 disabled:cursor-not-allowed
+                                     transition-all duration-200"
+                            >
+                                <option value={currentUser.station}>
+                                    🏠 Min station ({currentUser.station})
+                                </option>
+                                {(() => {
+                                    const userArea = getStationArea(currentUser.station);
+                                    if (userArea) {
+                                        return (
+                                            <option value={userArea}>
+                                                🗺️ Hela området ({userArea})
+                                            </option>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+                            </select>
+                        </div>
+                    </div>
+                )}
 
                 {/* ── Submit-knapp ──────────────────────────────────── */}
                 <button

@@ -7,10 +7,11 @@ export default defineSchema({
   users: defineTable({
     tokenIdentifier: v.string(),
     name: v.string(),
-    role: v.union(v.literal("admin"), v.literal("user")),
-    station: v.optional(v.string()), // För framtida multi-stations-stöd
+    role: v.union(v.literal("user"), v.literal("manager")),
+    station: v.string(), // Obligatorisk - användaren tillhör en station
   })
-    .index("by_token", ["tokenIdentifier"]),
+    .index("by_token", ["tokenIdentifier"])
+    .index("by_station", ["station"]),
 
   // ─── Idéer ───────────────────────────────────────────────────
   // Kärnan i flödet: Idé → Intressekoll → Omröstning → Verkstad.
@@ -30,9 +31,16 @@ export default defineSchema({
       v.literal("archived"),
     ),
     votesCount: v.number(),      // Denormaliserat för snabb sortering
+    targetAudience: v.string(),  // T.ex. "Norrtälje", "Roslagen", "Nord"
+    scope: v.union(
+      v.literal("station"),      // Station-nivå
+      v.literal("area"),          // Stationsområde-nivå
+      v.literal("region"),        // Region-nivå
+    ),
   })
     .index("by_status", ["status"])
-    .index("by_author", ["authorId"]),
+    .index("by_author", ["authorId"])
+    .index("by_target", ["targetAudience"]),
 
   // ─── Röster ──────────────────────────────────────────────────
   // Stöd-röster (intressekoll) och skarpa röster (omröstning).
