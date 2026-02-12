@@ -10,6 +10,7 @@ async function requireAdmin(ctx: any) {
 
     const user = await ctx.db
         .query("users")
+        // @ts-expect-error - Convex query builder types
         .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
         .unique();
 
