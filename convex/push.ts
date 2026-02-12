@@ -1,6 +1,6 @@
 
 import { v } from "convex/values";
-import { mutation, internalQuery } from "./_generated/server";
+import { mutation, internalQuery, internalMutation } from "./_generated/server";
 
 /**
  * saveSubscription - Sparar en användares push-subscription.
@@ -63,10 +63,8 @@ export const getSubscriptions = internalQuery({
     },
 });
 
-/**
- * removeSubscription - Tar bort en död subscription.
- */
-export const removeSubscription = mutation({
+// removeSubscription - Tar bort en död subscription. (Intern)
+export const removeSubscription = internalMutation({
     args: { endpoint: v.string() },
     handler: async (ctx, args) => {
         const sub = await ctx.db
