@@ -5,6 +5,7 @@ import { api } from "../convex/_generated/api";
 import { useState } from "react";
 import type { Id } from "../convex/_generated/dataModel";
 import WorkshopCard from "./WorkshopCard";
+import { getStationsInArea, getAllStationsInRegion, getStationArea } from "../lib/org-structure";
 
 // ─── Tröskelvärde (visas i UI:t) ──────────────────────────
 const SUPPORT_THRESHOLD = 3;
@@ -19,7 +20,17 @@ const SUPPORT_THRESHOLD = 3;
  *   approved → "Redo för verkstaden"
  */
 export default function IdeaFeed() {
-    const ideas = useQuery(api.ideas.getIdeas);
+    // ── Hämta användare för att kolla behörighet ───────────────
+    const currentUser = useQuery(api.users.getCurrentUser);
+
+    // ── Filter-state (för managers) ────────────────────────────
+    const [stationFilter, setStationFilter] = useState<string>("");
+
+    // Hämta idéer (med eventuellt filter)
+    const ideas = useQuery(api.ideas.getIdeas, {
+        station: stationFilter || undefined
+    });
+
     const castVote = useMutation(api.votes.castVote);
 
     // ── Laddningsläge ──────────────────────────────────────────
@@ -39,34 +50,87 @@ export default function IdeaFeed() {
         );
     }
 
-    // ── Tomt läge ──────────────────────────────────────────────
-    if (ideas.length === 0) {
-        return (
-            <div className="w-full max-w-2xl mx-auto px-4 py-16 text-center">
-                <span className="text-5xl block mb-4">💤</span>
-                <h2 className="text-xl font-bold text-slate-700">
-                    Inga idéer ännu
-                </h2>
-                <p className="text-slate-500 mt-2">
-                    Var den första att skicka in en gnista!
-                </p>
-            </div>
-        );
-    }
-
     return (
         <div className="w-full max-w-2xl mx-auto px-4 py-8 space-y-6">
-            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                <span className="text-3xl">🏛️</span> Torgmötet
-            </h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                    <span className="text-3xl">🏛️</span> Torgmötet
+                </h1>
+
+                {/* ── Filter-dropdown för managers ────────────────── */}
+                {(currentUser?.role === "area_manager" || currentUser?.role === "region_manager") && (
+                    <StationFilter
+                        currentUser={currentUser}
+                        value={stationFilter}
+                        onChange={setStationFilter}
+                    />
+                )}
+            </div>
+
             <p className="text-slate-500 text-sm -mt-3">
                 Stötta idéer du tror på. {SUPPORT_THRESHOLD} stöttningar → skarp omröstning.
             </p>
 
-            {ideas.map((idea) => (
-                <IdeaCard key={idea._id} idea={idea} castVote={castVote} />
-            ))}
+            {/* ── Tomt läge (efter filter) ────────────────────── */}
+            {ideas.length === 0 ? (
+                <div className="w-full py-16 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    <span className="text-4xl block mb-3">👻</span>
+                    <h2 className="text-lg font-medium text-slate-600">
+                        {stationFilter ? `Inga idéer för ${stationFilter}` : "Inga idéer ännu"}
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-1">
+                        Var den första att skicka in en gnista!
+                    </p>
+                </div>
+            ) : (
+                ideas.map((idea) => (
+                    <IdeaCard key={idea._id} idea={idea} castVote={castVote} />
+                ))
+            )}
         </div>
+    );
+}
+
+// ─── Filter-komponent ─────────────────────────────────────────
+
+function StationFilter({
+    currentUser,
+    value,
+    onChange
+}: {
+    currentUser: any;
+    value: string;
+    onChange: (val: string) => void;
+}) {
+    // Räkna ut vilka stationer som kan väljas
+    const stations = (() => {
+        if (currentUser.role === "area_manager") {
+            const area = currentUser.area || getStationArea(currentUser.station || "");
+            return area ? getStationsInArea(area) : [];
+        }
+        if (currentUser.role === "region_manager") {
+            // För regionchefer, visa alla i regionen
+            // (Här skulle vi kunna gruppera per område, men en platt lista funkar för nu)
+            return currentUser.region ? getAllStationsInRegion(currentUser.region) : [];
+        }
+        return [];
+    })();
+
+    if (stations.length === 0) return null;
+
+    return (
+        <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="text-sm border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+            <option value="">🗺️ Alla stationer</option>
+            {stations.map((s) => (
+                <option key={s} value={s}>
+                    🏠 {s}
+                </option>
+            ))}
+        </select>
     );
 }
 

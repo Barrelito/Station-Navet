@@ -25,8 +25,10 @@ const HIDDEN_STATUSES = ["draft", "archived"] as const;
  * i det publika flödet (Torgmötet).
  */
 export const getIdeas = query({
-    args: {},
-    handler: async (ctx) => {
+    args: {
+        station: v.optional(v.string()), // Filtrera på specifik station (för managers)
+    },
+    handler: async (ctx, args) => {
         // ── 1. Hämta inloggad användare ──────────────────────────
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) {
@@ -45,11 +47,15 @@ export const getIdeas = query({
         }
 
         // ── 2. Beräkna hierarkiska målgrupper ────────────────────
+        // Vilka targets har användaren BEHÖRIGHET att se?
+        const allowedTargets: string[] = [];
+
+        // Alla ser sin egen station + område + region
         const userStation = user.station;
         const userArea = getStationArea(userStation);
         const userRegion = getRegion(userStation);
 
-        const allowedTargets = [userStation];
+        allowedTargets.push(userStation);
         if (userArea) allowedTargets.push(userArea);
         if (userRegion) allowedTargets.push(userRegion);
 
@@ -80,8 +86,38 @@ export const getIdeas = query({
                 return false;
             }
 
-            // Visa endast idéer som riktar sig till användarens station, område eller region
-            return allowedTargets.includes(idea.targetAudience);
+            // 1. Grundkoll: Får användaren se idén överhuvudtaget?
+            if (!allowedTargets.includes(idea.targetAudience)) {
+                return false;
+            }
+
+            // 2. Om filter är aktivt: Visa bara idéer relevanta för vald station
+            if (args.station) {
+                // Stationschefer får bara filtrera på sin egen station (vilket de redan ser)
+                // Area/Region managers får filtrera på stationer de har behörighet till
+
+                // Validera att användaren får se denna station
+                // (Vi har redan byggt allowedTargets, så om stationen finns där är det OK)
+                if (!allowedTargets.includes(args.station)) {
+                    // Om man försöker filtrera på en station man inte får se → visa tomt
+                    return false;
+                }
+
+                // Vilka targets är relevanta för den VALDA stationen?
+                // Stationen själv + dess område + dess region
+                const filterArea = getStationArea(args.station);
+                const filterRegion = getRegion(args.station);
+
+                const relevantForStation = [
+                    args.station,
+                    filterArea,
+                    filterRegion
+                ].filter(Boolean); // Ta bort null/undefined
+
+                return relevantForStation.includes(idea.targetAudience);
+            }
+
+            return true;
         });
     },
 });
