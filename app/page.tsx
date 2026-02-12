@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
 import Header from "../components/Header";
 import IdeaForm from "../components/IdeaForm";
 import IdeaFeed from "../components/IdeaFeed";
@@ -15,6 +18,16 @@ import IdeaFeed from "../components/IdeaFeed";
  * 4. Torgmötes-flödet (IdeaFeed)
  */
 export default function DashboardPage() {
+    const router = useRouter();
+    const currentUser = useQuery(api.users.getCurrentUser);
+
+    // Redirecta admin-användare till admin-dashboard
+    useEffect(() => {
+        if (currentUser?.role === "admin") {
+            router.push("/admin");
+        }
+    }, [currentUser, router]);
+
     // ── State för collapsible IdeaForm ─────────────────────────
     const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -61,8 +74,8 @@ export default function DashboardPage() {
                     {/* Formuläret (collapsible) */}
                     <div
                         className={`overflow-hidden transition-all duration-500 ease-in-out ${isFormOpen
-                                ? "max-h-[2000px] opacity-100 mt-4"
-                                : "max-h-0 opacity-0"
+                            ? "max-h-[2000px] opacity-100 mt-4"
+                            : "max-h-0 opacity-0"
                             }`}
                     >
                         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-2">
