@@ -233,6 +233,7 @@ function IdeaCard({
     const [error, setError] = useState<string | null>(null);
 
     const isAuthor = currentUser?._id === idea.authorId;
+    const voteStats = useQuery(api.votes.getVoteStats, { ideaId: idea._id });
 
     // Generisk rösthanterare
     const handleVote = async (type: "support" | "yes" | "no") => {
@@ -327,6 +328,7 @@ function IdeaCard({
                         loading={loading}
                         onYes={() => handleVote("yes")}
                         onNo={() => handleVote("no")}
+                        stats={voteStats}
                     />
                 </div>
             )}
@@ -406,40 +408,74 @@ function VotingActions({
     loading,
     onYes,
     onNo,
+    stats,
 }: {
     loading: string | null;
     onYes: () => void;
     onNo: () => void;
+    stats?: { yes: number; no: number; total: number };
 }) {
+    if (!stats) return <Spinner />;
+
+    const yesPercent = stats.total > 0 ? Math.round((stats.yes / stats.total) * 100) : 0;
+    const noPercent = stats.total > 0 ? Math.round((stats.no / stats.total) * 100) : 0;
+
     return (
-        <div className="space-y-3">
-            <p className="text-sm font-semibold text-blue-600 flex items-center gap-2">
-                <span className="text-lg">⚡</span> Skarp omröstning pågår
-            </p>
+        <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+                <p className="font-semibold text-blue-600 flex items-center gap-2">
+                    <span className="text-lg">⚡</span> Skarp omröstning pågår
+                </p>
+                <span className="text-slate-500 text-xs">
+                    {stats.total} röster totalt
+                </span>
+            </div>
+
+            {/* ── Progress Bar ───────────────────────────────────── */}
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                <div
+                    style={{ width: `${yesPercent}%` }}
+                    className="bg-emerald-500 h-full transition-all duration-500"
+                />
+                <div
+                    style={{ width: `${noPercent}%` }}
+                    className="bg-red-500 h-full transition-all duration-500"
+                />
+            </div>
+
             <div className="flex gap-3">
                 <button
                     onClick={onYes}
                     disabled={loading !== null}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl
-                     bg-emerald-50 border border-emerald-200 px-4 py-2.5
-                     text-sm font-semibold text-emerald-700
-                     hover:bg-emerald-100 active:scale-[0.97]
+                    className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl
+                     bg-emerald-50 border border-emerald-200 px-4 py-3
+                     text-emerald-700 hover:bg-emerald-100 active:scale-[0.97]
                      disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-all duration-200"
+                     transition-all duration-200 group"
                 >
-                    {loading === "yes" ? <Spinner /> : "✅"} Ja
+                    <span className="text-sm font-bold flex items-center gap-2">
+                        ✅ Ja
+                    </span>
+                    <span className="text-xs opacity-75 group-hover:opacity-100">
+                        {stats.yes} röster ({yesPercent}%)
+                    </span>
                 </button>
+
                 <button
                     onClick={onNo}
                     disabled={loading !== null}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl
-                     bg-red-50 border border-red-200 px-4 py-2.5
-                     text-sm font-semibold text-red-700
-                     hover:bg-red-100 active:scale-[0.97]
+                    className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl
+                     bg-red-50 border border-red-200 px-4 py-3
+                     text-red-700 hover:bg-red-100 active:scale-[0.97]
                      disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-all duration-200"
+                     transition-all duration-200 group"
                 >
-                    {loading === "no" ? <Spinner /> : "❌"} Nej
+                    <span className="text-sm font-bold flex items-center gap-2">
+                        ❌ Nej
+                    </span>
+                    <span className="text-xs opacity-75 group-hover:opacity-100">
+                        {stats.no} röster ({noPercent}%)
+                    </span>
                 </button>
             </div>
         </div>

@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 // ─── Tröskelvärde: antal stöttningar för att nå omröstning ──
@@ -94,5 +94,23 @@ export const castVote = mutation({
                 await ctx.db.patch(args.ideaId, { status: "voting" });
             }
         }
+    },
+});
+
+/**
+ * getVoteStats – Hämtar röstfördelning för en idé (Ja/Nej).
+ */
+export const getVoteStats = query({
+    args: { ideaId: v.id("ideas") },
+    handler: async (ctx, args) => {
+        const votes = await ctx.db
+            .query("votes")
+            .withIndex("by_idea", (q) => q.eq("ideaId", args.ideaId))
+            .collect();
+
+        const yes = votes.filter((v) => v.type === "yes").length;
+        const no = votes.filter((v) => v.type === "no").length;
+
+        return { yes, no, total: yes + no };
     },
 });
