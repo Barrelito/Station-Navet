@@ -273,9 +273,11 @@ function IdeaCard({
                     </div>
                 </div>
 
-                <p className="text-slate-600 text-sm leading-relaxed">
-                    {idea.description}
-                </p>
+                <ExpandableText
+                    text={idea.description}
+                    limit={200}
+                    className="text-slate-600 text-sm leading-relaxed"
+                />
             </div>
 
             {/* ── Detaljer (Målbild + Resurser) ───────────────────── */}
@@ -284,17 +286,21 @@ function IdeaCard({
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         🎯 Målbild
                     </p>
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                        {idea.perfectState}
-                    </p>
+                    <ExpandableText
+                        text={idea.perfectState}
+                        limit={100}
+                        className="text-sm text-slate-700 leading-relaxed"
+                    />
                 </div>
                 <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         🤝 Resursbehov
                     </p>
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                        {idea.resourceNeeds}
-                    </p>
+                    <ExpandableText
+                        text={idea.resourceNeeds}
+                        limit={100}
+                        className="text-sm text-slate-700 leading-relaxed"
+                    />
                 </div>
             </div>
 
@@ -527,4 +533,37 @@ function formatTimeAgo(timestamp: number): string {
     if (diffDays < 7) return `${diffDays} dagar sedan`;
 
     return new Date(timestamp).toLocaleDateString("sv-SE");
+}
+
+function ExpandableText({
+    text,
+    limit = 150,
+    className = "text-slate-600 text-sm leading-relaxed"
+}: {
+    text: string;
+    limit?: number;
+    className?: string;
+}) {
+    const [expanded, setExpanded] = useState(false);
+
+    if (text.length <= limit) {
+        return <p className={className}>{text}</p>;
+    }
+
+    return (
+        <div>
+            <p className={className}>
+                {expanded ? text : `${text.slice(0, limit).trim()}...`}
+            </p>
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setExpanded(!expanded);
+                }}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 mt-1 hover:underline focus:outline-none"
+            >
+                {expanded ? "Visa mindre" : "Läs mer"}
+            </button>
+        </div>
+    );
 }
