@@ -242,7 +242,10 @@ function IdeaCard({
         try {
             await castVote({ ideaId: idea._id, type });
         } catch (err: any) {
-            setError(err.message || "Något gick fel.");
+            // Städa upp felmeddelandet (ta bort "Uncaught Error: " etc som Convex kan lägga på)
+            const rawMessage = err.message || "Något gick fel.";
+            const cleanMessage = rawMessage.replace(/^(Uncaught )?Error: /, "");
+            setError(cleanMessage);
         } finally {
             setLoading(null);
         }

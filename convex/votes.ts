@@ -56,11 +56,20 @@ export const castVote = mutation({
                 throw new Error("Du har redan stöttat denna idé.");
             }
         } else if (args.type === "yes" || args.type === "no") {
-            const hasVoted = existingVotes.some(
+            const previousVote = existingVotes.find(
                 (v) => v.type === "yes" || v.type === "no"
             );
-            if (hasVoted) {
-                throw new Error("Du har redan röstat i denna omröstning.");
+
+            if (previousVote) {
+                if (previousVote.type === args.type) {
+                    // Användaren klickar på samma röst igen -> gör inget (eller ta bort? Vi gör inget nu)
+                    return;
+                }
+
+                // Ändra röst: Ta bort den gamla, lägg till den nya (eller patcha)
+                // Eftersom vi vill ha en "ren" logg kan vi patcha den befintliga.
+                await ctx.db.patch(previousVote._id, { type: args.type });
+                return; // Klart, vi behöver inte göra en insert nedan
             }
         }
 
@@ -72,7 +81,7 @@ export const castVote = mutation({
             throw new Error("Du kan inte rösta på din egen idé.");
         }
 
-        // ── 3. Spara rösten ───────────────────────────────────────
+        // ── 3. Spara rösten (om ingen tidigare hittades/ändrades) ──────
         await ctx.db.insert("votes", {
             ideaId: args.ideaId,
             userId: user._id,
