@@ -49,12 +49,19 @@ export const castVote = mutation({
             )
             .collect();
 
-        // Kolla om användaren redan lagt samma typ av röst
-        const alreadyVoted = existingVotes.some(
-            (vote) => vote.type === args.type
-        );
-        if (alreadyVoted) {
-            throw new Error("Du har redan röstat med denna typ på denna idé.");
+        // Validera baserat på typ av röst
+        if (args.type === "support") {
+            const hasSupported = existingVotes.some((v) => v.type === "support");
+            if (hasSupported) {
+                throw new Error("Du har redan stöttat denna idé.");
+            }
+        } else if (args.type === "yes" || args.type === "no") {
+            const hasVoted = existingVotes.some(
+                (v) => v.type === "yes" || v.type === "no"
+            );
+            if (hasVoted) {
+                throw new Error("Du har redan röstat i denna omröstning.");
+            }
         }
 
         // ── 2b. Validera att man inte röstar på sin egen idé ──────
