@@ -57,6 +57,14 @@ export const castVote = mutation({
             throw new Error("Du har redan röstat med denna typ på denna idé.");
         }
 
+        // ── 2b. Validera att man inte röstar på sin egen idé ──────
+        const idea = await ctx.db.get(args.ideaId);
+        if (!idea) throw new Error("Idén hittades inte.");
+
+        if (idea.authorId === user._id) {
+            throw new Error("Du kan inte rösta på din egen idé.");
+        }
+
         // ── 3. Spara rösten ───────────────────────────────────────
         await ctx.db.insert("votes", {
             ideaId: args.ideaId,
@@ -67,8 +75,7 @@ export const castVote = mutation({
         // ── 4. Tröskeln: Stöd → Omröstning ───────────────────────
         // Räkna alla 'support'-röster på denna idé (inklusive den nya).
         if (args.type === "support") {
-            const idea = await ctx.db.get(args.ideaId);
-            if (!idea) throw new Error("Idén hittades inte.");
+            // (Idea är redan hämtad ovan)
 
             const allSupportVotes = await ctx.db
                 .query("votes")

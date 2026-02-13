@@ -319,6 +319,20 @@ export const approveIdea = mutation({
             throw new Error("Idén kan bara godkännas under omröstningsfasen.");
         }
 
+        // ── Security Check ────────────────────────────────────────
+        // Endast chefer får godkänna idéer
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+            .unique();
+
+        if (!user) throw new Error("Användare ej funnen.");
+
+        const isManager = ["station_manager", "area_manager", "region_manager", "admin"].includes(user.role);
+        if (!isManager) {
+            throw new Error("Endast chefer har behörighet att godkänna idéer.");
+        }
+
         await ctx.db.patch(args.ideaId, { status: "approved" });
     },
 });

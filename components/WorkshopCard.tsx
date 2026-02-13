@@ -16,9 +16,11 @@ import type { Id } from "../convex/_generated/dataModel";
 export default function WorkshopCard({
     ideaId,
     ideaStatus,
+    currentUser,
 }: {
     ideaId: Id<"ideas">;
     ideaStatus: string;
+    currentUser: any;
 }) {
     // ── Hämta task kopplad till idén ────────────────────────────
     const task = useQuery(api.tasks.getTaskByIdeaId, { ideaId });
@@ -73,11 +75,13 @@ export default function WorkshopCard({
             )}
 
             {/* ═══ STATUS: VOTING → Godkänn-knapp (chef) ═══════════ */}
-            {ideaStatus === "voting" && (
-                <div className="space-y-3">
-                    <p className="text-sm font-semibold text-blue-600 flex items-center gap-2">
-                        <span className="text-lg">⚡</span> Omröstning pågår
-                    </p>
+            {ideaStatus === "voting" && (currentUser?.role === "station_manager" || currentUser?.role === "area_manager" || currentUser?.role === "region_manager" || currentUser?.role === "admin") && (
+                <div className="space-y-3 pt-2 border-t border-slate-100">
+                    <div className="flex items-center gap-2 text-blue-600">
+                        <span className="text-sm font-semibold">
+                            Beslut krävs
+                        </span>
+                    </div>
                     <button
                         onClick={() =>
                             handleAction("approve", () => approveIdea({ ideaId }), "Idén är godkänd! 🎉")
@@ -94,9 +98,12 @@ export default function WorkshopCard({
                                 <Spinner /> Godkänner...
                             </span>
                         ) : (
-                            "🔓 Godkänn idén (Stationschef)"
+                            "🔓 Godkänn idén (Chef)"
                         )}
                     </button>
+                    <p className="text-xs text-slate-400 text-center">
+                        Endast synligt för chefer
+                    </p>
                 </div>
             )}
 

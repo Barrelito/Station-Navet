@@ -84,7 +84,7 @@ export default function IdeaFeed() {
                 </div>
             ) : (
                 ideas.map((idea) => (
-                    <IdeaCard key={idea._id} idea={idea} castVote={castVote} />
+                    <IdeaCard key={idea._id} idea={idea} castVote={castVote} currentUser={currentUser} />
                 ))
             )}
         </div>
@@ -146,6 +146,7 @@ type Idea = {
     votesCount: number;
     targetAudience: string; // T.ex. "Norrtälje", "Roslagen", "Nord"
     scope: string;          // "station", "area", eller "region"
+    authorId: Id<"users">;
 };
 
 // ─── Status-badge ─────────────────────────────────────────────
@@ -222,12 +223,16 @@ function ScopeBadge({ scope, targetAudience }: { scope: string; targetAudience: 
 function IdeaCard({
     idea,
     castVote,
+    currentUser,
 }: {
     idea: Idea;
     castVote: any;
+    currentUser: any;
 }) {
     const [loading, setLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const isAuthor = currentUser?._id === idea.authorId;
 
     // Generisk rösthanterare
     const handleVote = async (type: "support" | "yes" | "no") => {
@@ -254,6 +259,11 @@ function IdeaCard({
                         {idea.title}
                     </h3>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                        {isAuthor && (
+                            <span className="inline-block text-xs font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                                👤 Du
+                            </span>
+                        )}
                         <ScopeBadge scope={idea.scope} targetAudience={idea.targetAudience} />
                         <StatusBadge status={idea.status} />
                     </div>
@@ -305,16 +315,32 @@ function IdeaCard({
                         votesCount={idea.votesCount}
                         loading={loading}
                         onSupport={() => handleVote("support")}
+                        isAuthor={isAuthor}
                     />
                 </div>
             )}
 
-            {/* Voting, Approved, Workshop, Completed → WorkshopCard */}
+            {/* Voting: Visa BÅDE omröstning och ev. WorkshopCard (om chef) */}
+            {idea.status === "voting" && (
+                <div className="border-t border-slate-100 px-6 py-4">
+                    <VotingActions
+                        loading={loading}
+                        onYes={() => handleVote("yes")}
+                        onNo={() => handleVote("no")}
+                    />
+                </div>
+            )}
+
+            {/* Voting (för chefer), Approved, Workshop, Completed → WorkshopCard */}
             {(idea.status === "voting" ||
                 idea.status === "approved" ||
                 idea.status === "workshop" ||
                 idea.status === "completed") && (
-                    <WorkshopCard ideaId={idea._id} ideaStatus={idea.status} />
+                    <WorkshopCard
+                        ideaId={idea._id}
+                        ideaStatus={idea.status}
+                        currentUser={currentUser}
+                    />
                 )}
         </div>
     );
@@ -325,10 +351,12 @@ function ProposalActions({
     votesCount,
     loading,
     onSupport,
+    isAuthor,
 }: {
     votesCount: number;
     loading: string | null;
     onSupport: () => void;
+    isAuthor: boolean;
 }) {
     return (
         <div className="flex items-center justify-between gap-4">
@@ -352,7 +380,7 @@ function ProposalActions({
 
             <button
                 onClick={onSupport}
-                disabled={loading === "support"}
+                disabled={loading === "support" || isAuthor}
                 className="inline-flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200
                    px-4 py-2.5 text-sm font-semibold text-amber-700
                    hover:bg-amber-100 active:scale-[0.97]
@@ -363,6 +391,8 @@ function ProposalActions({
                     <span className="flex items-center gap-2">
                         <Spinner /> Stöttar...
                     </span>
+                ) : isAuthor ? (
+                    "👤 Din egen idé"
                 ) : (
                     "👍 Stötta idén"
                 )}
