@@ -28,41 +28,51 @@ function urlBase64ToUint8Array(base64String: string) {
  * Registrera Service Worker och prenumerera på push.
  */
 export async function subscribeToPush(saveSubscriptionMutation: any) {
+    console.log('Starting push subscription process...');
+
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.log('Push not supported');
+        console.error('Push missing support: serviceWorker or PushManager missing');
         return false;
     }
 
     try {
         // 1. Registrera SW
+        console.log('Registering service worker...');
         const registration = await navigator.serviceWorker.register('/sw.js');
         console.log('SW registered:', registration);
 
         // 2. Vänta tills SW är redo
+        console.log('Waiting for SW ready...');
         await navigator.serviceWorker.ready;
+        console.log('SW Ready');
 
         // 3. Begär tillåtelse (viktigt!)
+        console.log('Requesting permission...');
         const permission = await Notification.requestPermission();
+        console.log('Permission result:', permission);
+
         if (permission !== 'granted') {
-            console.warn('Notification permission denied');
+            console.warn('Notification permission denied, got:', permission);
             return false;
         }
 
         // 4. Prenumerera
         if (!PUBLIC_VAPID_KEY) {
-            console.error("Missing VAPID public key");
+            console.error("Missing VAPID public key. Check NEXT_PUBLIC_VAPID_PUBLIC_KEY in .env.local");
             return false;
         }
 
+        console.log('Subscribing with VAPID key...', PUBLIC_VAPID_KEY ? 'Present' : 'Missing');
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
         });
 
-        console.log('Push subscription:', subscription);
+        console.log('Push subscription success:', subscription);
 
-        // 4. Spara i db
+        // 5. Spara i db
         const subJson = subscription.toJSON();
+        console.log('Saving subscription to DB...');
         await saveSubscriptionMutation({
             endpoint: subJson.endpoint!,
             keys: {
@@ -71,6 +81,7 @@ export async function subscribeToPush(saveSubscriptionMutation: any) {
             }
         });
 
+        console.log('Subscription saved to DB');
         return true;
     } catch (error) {
         console.error('Failed to subscribe to push:', error);

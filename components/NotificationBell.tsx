@@ -34,10 +34,15 @@ export default function NotificationBell() {
         }
     }, [isOpen]);
 
-    const handleEnablePush = async () => {
+    const handleEnablePush = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('handleEnablePush clicked');
         setIsLoading(true);
         try {
+            console.log('Calling subscribeToPush...');
             const result = await subscribeToPush(saveSubscription);
+            console.log('subscribeToPush result:', result);
             if (result) {
                 setPushEnabled(true);
                 alert("Push-notiser är nu aktiverade! 🎉");
@@ -45,7 +50,7 @@ export default function NotificationBell() {
                 alert("Kunde inte aktivera notiser. Kontrollera behörigheter eller försök igen senare.");
             }
         } catch (err) {
-            console.error(err);
+            console.error('Error in handleEnablePush:', err);
             alert("Ett fel uppstod.");
         } finally {
             setIsLoading(false);
@@ -121,6 +126,8 @@ export default function NotificationBell() {
                                 Vill du ha notiser i mobilen även när du inte använder appen?
                             </p>
                             <button
+                                type="button"
+                                onClick={handleEnablePush}
                                 disabled={isLoading}
                                 className={`w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded shadow-sm transition-colors ${isLoading ? "opacity-75 cursor-wait" : ""}`}
                             >
