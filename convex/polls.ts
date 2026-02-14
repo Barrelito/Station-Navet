@@ -1,0 +1,119 @@
+import { mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { v } from "convex/values";
+import {
+    getStationArea,
+    getRegion,
+    getAllStations,
+    getAllAreas,
+    getStationsInArea,
+} from "../lib/org-structure";
+
+/**
+ * createPoll – Skapar en omröstning (direkt till voting).
+ * Endast för chefer.
+ */
+export const createPoll = mutation({
+    args: {
+        title: v.string(),
+        description: v.string(),
+        targetAudience: v.string(),
+    },
+    handler: async (ctx, args) => {
+        // 1. Autentisering & Behörighetskoll
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Du måste vara inloggad.");
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+            .unique();
+
+        if (!user) {
+            throw new Error("Användare saknas.");
+        }
+
+        const isManager = ["station_manager", "area_manager", "region_manager", "admin"].includes(user.role);
+        if (!isManager) {
+            throw new Error("Endast chefer kan skapa omröstningar.");
+        }
+
+        // 2. Validera targetAudience (återanvänder logik från ideas.ts men förenklad)
+        const userArea = getStationArea(user.station || "");
+        const userRegion = getRegion(user.station || "");
+        const validTargets: string[] = [];
+
+        if (user.role === "station_manager") {
+            if (user.station) validTargets.push(user.station);
+            if (userArea) validTargets.push(userArea);
+        } else if (user.role === "area_manager") {
+            const area = user.area || userArea;
+            if (area) {
+                validTargets.push(area);
+                validTargets.push(...getStationsInArea(area));
+            }
+        } else if (user.role === "region_manager") {
+            if (userRegion) validTargets.push(userRegion);
+        } else if (user.role === "admin") {
+            // Admin får göra allt (men vi kanske ska begränsa? kör på detta för nu)
+            validTargets.push(args.targetAudience);
+        }
+
+        if (user.role !== "admin" && !validTargets.includes(args.targetAudience)) {
+            throw new Error(`Du saknar behörighet att posta till ${args.targetAudience}`);
+        }
+
+
+        // 3. Beräkna scope
+        let scope: "station" | "area" | "region";
+        if (getAllStations().includes(args.targetAudience)) {
+            scope = "station";
+        } else if (getAllAreas().includes(args.targetAudience)) {
+            scope = "area";
+        } else {
+            scope = "region";
+        }
+
+        // 4. Spara (direkt till voting)
+        const ideaId = await ctx.db.insert("ideas", {
+            title: args.title,
+            description: args.description,
+            // perfectState & resourceNeeds är optional nu
+            authorId: user._id,
+            status: "voting", // Direkt till omröstning!
+            votesCount: 0,
+            targetAudience: args.targetAudience,
+            scope,
+        });
+
+        // 5. Notiser (Copy-paste logik från ideas.ts men anpassad text)
+        // TODO: Refactor notification logic to shared helper later if needed
+        let usersToNotify = await ctx.db.query("users").collect();
+        usersToNotify = usersToNotify.filter(u => {
+            if (u._id === user._id) return false;
+            const uArea = getStationArea(u.station || "");
+            const uRegion = getRegion(u.station || "");
+
+            if (scope === "station") return u.station === args.targetAudience;
+            if (scope === "area") return uArea === args.targetAudience;
+            if (scope === "region") return uRegion === args.targetAudience;
+            return false;
+        });
+
+        const userIdsToNotify = usersToNotify.map(u => u._id);
+        if (userIdsToNotify.length > 0) {
+            await ctx.scheduler.runAfter(0, internal.notifications.sendNotification, {
+                userIds: userIdsToNotify,
+                type: "vote", // Använd röst-ikon
+                title: `Ny omröstning: ${args.title}`,
+                message: `Din chef vill veta vad du tycker!`,
+                link: "/",
+                relatedId: ideaId,
+            });
+        }
+
+        return ideaId;
+    },
+});

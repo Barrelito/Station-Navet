@@ -13,6 +13,7 @@ import type * as ideas from "../ideas.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as organizations from "../organizations.js";
+import type * as polls from "../polls.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
 import type * as tasks from "../tasks.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   notifications: typeof notifications;
   organizations: typeof organizations;
+  polls: typeof polls;
   push: typeof push;
   pushActions: typeof pushActions;
   tasks: typeof tasks;

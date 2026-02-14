@@ -40,8 +40,8 @@ export default defineSchema({
   ideas: defineTable({
     title: v.string(),
     description: v.string(),
-    perfectState: v.string(),    // Vision: "Hur ser det ut när det är klart?"
-    resourceNeeds: v.string(),   // Vad krävs? Tid/Pengar/Beslut (kan vara JSON-sträng)
+    perfectState: v.optional(v.string()),    // Vision: "Hur ser det ut när det är klart?"
+    resourceNeeds: v.optional(v.string()),   // Vad krävs? Tid/Pengar/Beslut (kan vara JSON-sträng)
     authorId: v.id("users"),     // Relation → users
     status: v.union(
       v.literal("draft"),
