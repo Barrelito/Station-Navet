@@ -140,8 +140,8 @@ type Idea = {
     _creationTime: number;
     title: string;
     description: string;
-    perfectState: string;
-    resourceNeeds: string;
+    perfectState?: string;
+    resourceNeeds?: string;
     status: string;
     votesCount: number;
     targetAudience: string; // T.ex. "Norrtälje", "Roslagen", "Nord"
@@ -281,29 +281,34 @@ function IdeaCard({
             </div>
 
             {/* ── Detaljer (Målbild + Resurser) ───────────────────── */}
-            <div className="px-6 pb-4 space-y-3">
-                <div className="rounded-xl bg-slate-50 p-4">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                        🎯 Målbild
-                    </p>
-                    <ExpandableText
-                        text={idea.perfectState}
-                        limit={100}
-                        className="text-sm text-slate-700 leading-relaxed"
-                    />
+            {(idea.perfectState || idea.resourceNeeds) && (
+                <div className="px-6 pb-4 space-y-3">
+                    {idea.perfectState && (
+                        <div className="rounded-xl bg-slate-50 p-4">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                                🎯 Målbild
+                            </p>
+                            <ExpandableText
+                                text={idea.perfectState}
+                                limit={100}
+                                className="text-sm text-slate-700 leading-relaxed"
+                            />
+                        </div>
+                    )}
+                    {idea.resourceNeeds && (
+                        <div className="rounded-xl bg-slate-50 p-4">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                                🤝 Resursbehov
+                            </p>
+                            <ExpandableText
+                                text={idea.resourceNeeds}
+                                limit={100}
+                                className="text-sm text-slate-700 leading-relaxed"
+                            />
+                        </div>
+                    )}
                 </div>
-                <div className="rounded-xl bg-slate-50 p-4">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                        🤝 Resursbehov
-                    </p>
-                    <ExpandableText
-                        text={idea.resourceNeeds}
-                        limit={100}
-                        className="text-sm text-slate-700 leading-relaxed"
-                    />
-                </div>
-            </div>
-
+            )}
             {/* ── Meta-info ───────────────────────────────────────── */}
             <div className="px-6 pb-3">
                 <p className="text-xs text-slate-400">
