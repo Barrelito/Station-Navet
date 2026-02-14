@@ -57,15 +57,19 @@ export async function subscribeToPush(saveSubscriptionMutation: any) {
         }
 
         // 4. Prenumerera
-        if (!PUBLIC_VAPID_KEY) {
+        const vapidKey = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '').trim();
+        if (!vapidKey) {
             console.error("Missing VAPID public key. Check NEXT_PUBLIC_VAPID_PUBLIC_KEY in .env.local");
             return false;
         }
 
-        console.log('Subscribing with VAPID key...', PUBLIC_VAPID_KEY ? 'Present' : 'Missing');
+        console.log('Subscribing with VAPID key length:', vapidKey.length);
+        const applicationServerKey = urlBase64ToUint8Array(vapidKey);
+        console.log('Converted applicationServerKey length:', applicationServerKey.length);
+
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+            applicationServerKey
         });
 
         console.log('Push subscription success:', subscription);
