@@ -286,7 +286,7 @@ export const submitIdea = mutation({
                 userIds: userIdsToNotify,
                 type: "new_idea",
                 title: `Ny idé för ${validatedTargetAudience}!`,
-                message: `${user.name} har föreslagit: "${args.title}"`,
+                message: `"${args.title}"`,
                 link: "/", // Länk till startsidan där feeden finns
                 relatedId: ideaId,
             });

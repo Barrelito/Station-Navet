@@ -25,6 +25,8 @@ export default function NotificationBell() {
     // Push state
     const [pushEnabled, setPushEnabled] = useState(false);
 
+    const [isLoading, setIsLoading] = useState(false);
+
     // Kolla status vid mount och när menyn öppnas
     useEffect(() => {
         if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -33,10 +35,20 @@ export default function NotificationBell() {
     }, [isOpen]);
 
     const handleEnablePush = async () => {
-        const result = await subscribeToPush(saveSubscription);
-        if (result) {
-            setPushEnabled(true);
-            // Stäng inte menyn direkt, så man ser att det lyckades (knappen försvinner)
+        setIsLoading(true);
+        try {
+            const result = await subscribeToPush(saveSubscription);
+            if (result) {
+                setPushEnabled(true);
+                alert("Push-notiser är nu aktiverade! 🎉");
+            } else {
+                alert("Kunde inte aktivera notiser. Kontrollera behörigheter eller försök igen senare.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Ett fel uppstod.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -109,10 +121,10 @@ export default function NotificationBell() {
                                 Vill du ha notiser i mobilen även när du inte använder appen?
                             </p>
                             <button
-                                onClick={handleEnablePush}
-                                className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded shadow-sm transition-colors"
+                                disabled={isLoading}
+                                className={`w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded shadow-sm transition-colors ${isLoading ? "opacity-75 cursor-wait" : ""}`}
                             >
-                                Slå på push-notiser 📲
+                                {isLoading ? "Aktiverar..." : "Slå på push-notiser 📲"}
                             </button>
                         </div>
                     )}

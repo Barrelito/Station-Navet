@@ -41,7 +41,14 @@ export async function subscribeToPush(saveSubscriptionMutation: any) {
         // 2. Vänta tills SW är redo
         await navigator.serviceWorker.ready;
 
-        // 3. Prenumerera
+        // 3. Begär tillåtelse (viktigt!)
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.warn('Notification permission denied');
+            return false;
+        }
+
+        // 4. Prenumerera
         if (!PUBLIC_VAPID_KEY) {
             console.error("Missing VAPID public key");
             return false;
