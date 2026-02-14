@@ -78,7 +78,7 @@ export const castVote = mutation({
         if (!idea) throw new Error("Idén hittades inte.");
 
         if (idea.authorId === user._id) {
-            throw new Error("Du kan inte rösta på din egen idé.");
+            throw new Error("Du kan inte rösta på din egen omröstning (eller idé).");
         }
 
         // ── 3. Spara rösten (om ingen tidigare hittades/ändrades) ──────
