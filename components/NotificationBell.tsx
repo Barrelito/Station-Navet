@@ -119,7 +119,7 @@ export default function NotificationBell() {
                         )}
                     </div>
 
-                    {/* ── Push-aktivering ───────────────────────────── */}
+                    {/* ── Push-aktivering (Inaktiverad tills vidare) ─────────────────────────────
                     {!pushEnabled && (
                         <div className="px-4 py-3 bg-blue-50 border-b border-blue-100">
                             <p className="text-xs text-blue-800 mb-2">
@@ -135,6 +135,7 @@ export default function NotificationBell() {
                             </button>
                         </div>
                     )}
+                    */}
 
                     <div className="max-h-96 overflow-y-auto">
                         {!notifications || notifications.length === 0 ? (

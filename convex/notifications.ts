@@ -22,12 +22,12 @@ export const getNotifications = query({
 
         if (!user) return [];
 
-        // Hämta alla aktiva (ej arkiverade) för användaren
+        // Hämta endast olästa notiser
         const notifications = await ctx.db
             .query("notifications")
-            .withIndex("by_user", (q) => q.eq("userId", user._id).eq("isArchived", false))
+            .withIndex("by_user_unread", (q) => q.eq("userId", user._id).eq("isRead", false))
             .order("desc")
-            .take(20); // Hämta de 20 senaste för nu
+            .take(20);
 
         return notifications;
     },
