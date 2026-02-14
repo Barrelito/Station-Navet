@@ -461,7 +461,7 @@ function VotingActions({
     loading: string | null;
     onYes: () => void;
     onNo: () => void;
-    stats?: { yes: number; no: number; total: number };
+    stats?: { yes: number; no: number; total: number; totalEligible: number; engagement: number };
 }) {
     if (!stats) return <Spinner />;
 
@@ -474,9 +474,14 @@ function VotingActions({
                 <p className="font-semibold text-blue-600 flex items-center gap-2">
                     <span className="text-lg">⚡</span> Skarp omröstning pågår
                 </p>
-                <span className="text-slate-500 text-xs">
-                    {stats.total} röster totalt
-                </span>
+                <div className="text-right">
+                    <span className="block font-bold text-slate-700">
+                        {stats.engagement}% deltagande
+                    </span>
+                    <span className="text-slate-400 text-xs">
+                        {stats.total} av {stats.totalEligible} har röstat
+                    </span>
+                </div>
             </div>
 
             {/* ── Progress Bar ───────────────────────────────────── */}

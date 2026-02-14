@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { getStationArea, getRegion } from "../lib/org-structure";
 
 // ─── Tröskelvärde: antal stöttningar för att nå omröstning ──
 const SUPPORT_THRESHOLD = 3;
@@ -114,7 +115,7 @@ export const castVote = mutation({
 });
 
 /**
- * getVoteStats – Hämtar röstfördelning för en idé (Ja/Nej).
+ * getVoteStats – Hämtar röstfördelning för en idé (Ja/Nej) samt engagemang.
  */
 export const getVoteStats = query({
     args: { ideaId: v.id("ideas") },
@@ -126,7 +127,47 @@ export const getVoteStats = query({
 
         const yes = votes.filter((v) => v.type === "yes").length;
         const no = votes.filter((v) => v.type === "no").length;
+        const totalVotes = yes + no;
 
-        return { yes, no, total: yes + no };
+        // ── Beräkna totalt antal berättigade röstare (för engagemang %) ──
+        const idea = await ctx.db.get(args.ideaId);
+        let totalEligible = 0;
+
+        if (idea) {
+            // Hämta alla users för att kunna filtrera
+            // (OBS: Vid stor skala bör detta optimeras med index/aggregat)
+            const allUsers = await ctx.db.query("users").collect();
+
+            // Filtrera users baserat på scope och targetAudience
+            // Vi återanvänder logiken från `ideas.ts` men förenklat
+            const eligibleUsers = allUsers.filter(u => {
+                const uStation = u.station || "";
+                const uArea = getStationArea(uStation);
+                const uRegion = getRegion(uStation);
+
+                if (idea.scope === "station") {
+                    return uStation === idea.targetAudience;
+                }
+                if (idea.scope === "area") {
+                    // Alla i området (inklusive de stationer som ingår)
+                    return uArea === idea.targetAudience || u.area === idea.targetAudience;
+                }
+                if (idea.scope === "region") {
+                    // Alla i regionen
+                    return uRegion === idea.targetAudience || u.region === idea.targetAudience;
+                }
+                return false;
+            });
+
+            totalEligible = eligibleUsers.length;
+        }
+
+        return {
+            yes,
+            no,
+            total: totalVotes,
+            totalEligible,
+            engagement: totalEligible > 0 ? Math.round((totalVotes / totalEligible) * 100) : 0
+        };
     },
 });
