@@ -26,9 +26,13 @@ export default function IdeaFeed() {
     // ── Filter-state (för managers) ────────────────────────────
     const [stationFilter, setStationFilter] = useState<string>("");
 
+    // ── Filter-state (för alla): Visa genomförda? ──────────────
+    const [showCompleted, setShowCompleted] = useState(false);
+
     // Hämta idéer (med eventuellt filter)
     const ideas = useQuery(api.ideas.getIdeas, {
-        station: stationFilter || undefined
+        station: stationFilter || undefined,
+        showCompleted: showCompleted || undefined
     });
 
     const castVote = useMutation(api.votes.castVote);
@@ -71,16 +75,46 @@ export default function IdeaFeed() {
                 Stötta idéer du tror på. {SUPPORT_THRESHOLD} stöttningar → skarp omröstning.
             </p>
 
+            {/* ── Flikar: Pågående / Genomförda ─────────────────── */}
+            <div className="flex p-1 bg-slate-100 rounded-xl">
+                <button
+                    onClick={() => setShowCompleted(false)}
+                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${!showCompleted
+                        ? "bg-white text-slate-800 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                        }`}
+                >
+                    🔥 Pågående
+                </button>
+                <button
+                    onClick={() => setShowCompleted(true)}
+                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${showCompleted
+                        ? "bg-white text-slate-800 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                        }`}
+                >
+                    ✅ Genomförda
+                </button>
+            </div>
+
             {/* ── Tomt läge (efter filter) ────────────────────── */}
             {ideas.length === 0 ? (
                 <div className="w-full py-16 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                    <span className="text-4xl block mb-3">👻</span>
+                    <span className="text-4xl block mb-3">
+                        {showCompleted ? "📭" : "👻"}
+                    </span>
                     <h2 className="text-lg font-medium text-slate-600">
-                        {stationFilter ? `Inga idéer för ${stationFilter}` : "Inga idéer ännu"}
+                        {showCompleted
+                            ? "Inga genomförda idéer än"
+                            : stationFilter
+                                ? `Inga pågående idéer för ${stationFilter}`
+                                : "Inga pågående idéer just nu"}
                     </h2>
-                    <p className="text-slate-400 text-sm mt-1">
-                        Var den första att skicka in en gnista!
-                    </p>
+                    {!showCompleted && (
+                        <p className="text-slate-400 text-sm mt-1">
+                            Var den första att skicka in en gnista!
+                        </p>
+                    )}
                 </div>
             ) : (
                 ideas.map((idea) => (

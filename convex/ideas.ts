@@ -28,6 +28,7 @@ const HIDDEN_STATUSES = ["draft", "archived"] as const;
 export const getIdeas = query({
     args: {
         station: v.optional(v.string()), // Filtrera på specifik station (för managers)
+        showCompleted: v.optional(v.boolean()), // NY: Visa genomförda?
     },
     handler: async (ctx, args) => {
         // ── 1. Hämta inloggad användare ──────────────────────────
@@ -82,9 +83,18 @@ export const getIdeas = query({
 
         // ── 4. Filtrera baserat på hierarki och status ────────────
         return allIdeas.filter((idea) => {
-            // Dölj drafts och archived
+            // Dölj drafts och archived alltid
             if (HIDDEN_STATUSES.includes(idea.status as any)) {
                 return false;
+            }
+
+            // Hantera "Completed" vs "Active"
+            if (args.showCompleted) {
+                // Om vi vill se genomförda: Visa ENDAST completed
+                if (idea.status !== "completed") return false;
+            } else {
+                // Default (Pågående): Visa INTE completed
+                if (idea.status === "completed") return false;
             }
 
             // 1. Grundkoll: Får användaren se idén överhuvudtaget?
@@ -96,16 +106,12 @@ export const getIdeas = query({
             if (args.station) {
                 // Stationschefer får bara filtrera på sin egen station (vilket de redan ser)
                 // Area/Region managers får filtrera på stationer de har behörighet till
-
                 // Validera att användaren får se denna station
-                // (Vi har redan byggt allowedTargets, så om stationen finns där är det OK)
                 if (!allowedTargets.includes(args.station)) {
-                    // Om man försöker filtrera på en station man inte får se → visa tomt
                     return false;
                 }
 
                 // Vilka targets är relevanta för den VALDA stationen?
-                // Stationen själv + dess område + dess region
                 const filterArea = getStationArea(args.station);
                 const filterRegion = getRegion(args.station);
 
@@ -113,7 +119,7 @@ export const getIdeas = query({
                     args.station,
                     filterArea,
                     filterRegion
-                ].filter(Boolean); // Ta bort null/undefined
+                ].filter(Boolean);
 
                 return relevantForStation.includes(idea.targetAudience);
             }
