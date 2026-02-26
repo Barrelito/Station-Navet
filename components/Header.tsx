@@ -6,6 +6,7 @@ import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import StationSelector from "./StationSelector";
 import NotificationBell from "./NotificationBell";
+import Link from "next/link";
 
 /**
  * Header – Sticky app-header i "native app"-stil.
@@ -57,8 +58,16 @@ export default function Header() {
                         </div>
                     </div>
 
-                    {/* ── Höger: Notiser + Clerk UserButton ──────────────────────── */}
-                    <div className="flex items-center gap-2">
+                    {/* ── Höger: Notiser + Historik + Clerk UserButton ──────────────────────── */}
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/history"
+                            className="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100/50 hover:bg-slate-100 text-slate-600 transition-colors"
+                            title="Historik"
+                        >
+                            <span className="text-lg">🗄️</span>
+                        </Link>
+
                         <NotificationBell />
 
                         <UserButton

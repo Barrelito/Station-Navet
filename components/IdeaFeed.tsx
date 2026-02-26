@@ -19,7 +19,7 @@ const SUPPORT_THRESHOLD = 3;
  *   voting   → "Ja" / "Nej"
  *   approved → "Redo för verkstaden"
  */
-export default function IdeaFeed() {
+export default function IdeaFeed({ isHistoryView = false }: { isHistoryView?: boolean }) {
     // ── Hämta användare för att kolla behörighet ───────────────
     const currentUser = useQuery(api.users.getCurrentUser);
 
@@ -30,10 +30,10 @@ export default function IdeaFeed() {
     const [activeTab, setActiveTab] = useState<"ideas" | "polls">("ideas");
 
     // Hämta idéer (med eventuellt filter)
-    // NOTE: vi skickar *inte* showCompleted längre, så getIdeas returnerar pågående
+    // NOTE: vi skickar *inte* showCompleted längre (såvida inte isHistoryView är true), så getIdeas returnerar pågående
     const allIdeas = useQuery(api.ideas.getIdeas, {
         station: stationFilter || undefined,
-        // showCompleted: false (default in backend is active only)
+        showCompleted: isHistoryView || undefined
     });
 
     const castVote = useMutation(api.votes.castVote);
@@ -55,14 +55,23 @@ export default function IdeaFeed() {
         );
     }
 
-    // Filtrera fram rätt lista lokalt
+    // Filtrera fram rätt lista lokalt (behövs bara ifall vi BÅDE har polls och ideas history)
     const ideas = allIdeas.filter(idea => {
-        if (activeTab === "ideas") {
-            // Visa allt som INTE är "poll" (gamla poster saknar fält, så vi litar på det)
-            return idea.type !== "poll";
+        if (isHistoryView) {
+            // Om vi är i historik-vyn, visa allt som är completed, men filtrera på flikarna
+            if (activeTab === "ideas") {
+                return idea.type !== "poll";
+            } else {
+                return idea.type === "poll";
+            }
         } else {
-            // activeTab === "polls"
-            return idea.type === "poll";
+            if (activeTab === "ideas") {
+                // Visa allt som INTE är "poll" (gamla poster saknar fält, så vi litar på det)
+                return idea.type !== "poll";
+            } else {
+                // activeTab === "polls"
+                return idea.type === "poll";
+            }
         }
     });
 
@@ -70,7 +79,7 @@ export default function IdeaFeed() {
         <div className="w-full max-w-2xl mx-auto px-4 py-8 space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                    <span className="text-3xl">🏛️</span> Torgmötet
+                    {isHistoryView ? null : <><span className="text-3xl">🏛️</span> Torgmötet</>}
                 </h1>
 
                 {/* ── Filter-dropdown för managers ────────────────── */}
@@ -84,9 +93,11 @@ export default function IdeaFeed() {
             </div>
 
             <p className="text-slate-500 text-sm -mt-3">
-                {activeTab === "ideas"
-                    ? `Stötta idéer du tror på. ${SUPPORT_THRESHOLD} stöttningar → skarp omröstning.`
-                    : "Skarp omröstning från chefer, säg vad du tycker!"}
+                {isHistoryView
+                    ? "Genomförda idéer och avslutade omröstningar."
+                    : activeTab === "ideas"
+                        ? `Stötta idéer du tror på. ${SUPPORT_THRESHOLD} stöttningar → skarp omröstning.`
+                        : "Skarp omröstning från chefer, säg vad du tycker!"}
             </p>
 
             {/* ── Flikar: Förslag / Polls ──────────────────────────── */}
@@ -94,8 +105,8 @@ export default function IdeaFeed() {
                 <button
                     onClick={() => setActiveTab("ideas")}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === "ideas"
-                            ? "bg-white text-slate-800 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                        ? "bg-white text-slate-800 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                         }`}
                 >
                     💡 Förslag
@@ -103,8 +114,8 @@ export default function IdeaFeed() {
                 <button
                     onClick={() => setActiveTab("polls")}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === "polls"
-                            ? "bg-white text-slate-800 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                        ? "bg-white text-slate-800 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                         }`}
                 >
                     📊 Polls
@@ -115,18 +126,20 @@ export default function IdeaFeed() {
             {ideas.length === 0 ? (
                 <div className="w-full py-16 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                     <span className="text-4xl block mb-3">
-                        {activeTab === "polls" ? "📊" : "👻"}
+                        {isHistoryView ? "📭" : activeTab === "polls" ? "📊" : "👻"}
                     </span>
                     <h2 className="text-lg font-medium text-slate-600">
-                        {activeTab === "polls"
-                            ? stationFilter
-                                ? `Inga aktuella omröstningar från chefer för ${stationFilter}`
-                                : "Inga aktuella omröstningar från chefer"
-                            : stationFilter
-                                ? `Inga pågående idéer för ${stationFilter}`
-                                : "Inga pågående idéer just nu"}
+                        {isHistoryView
+                            ? (activeTab === "polls" ? "Inga genomförda polls än" : "Inga genomförda projekt än")
+                            : activeTab === "polls"
+                                ? stationFilter
+                                    ? `Inga aktuella omröstningar från chefer för ${stationFilter}`
+                                    : "Inga aktuella omröstningar från chefer"
+                                : stationFilter
+                                    ? `Inga pågående idéer för ${stationFilter}`
+                                    : "Inga pågående idéer just nu"}
                     </h2>
-                    {activeTab === "ideas" && (
+                    {!isHistoryView && activeTab === "ideas" && (
                         <p className="text-slate-400 text-sm mt-1">
                             Var den första att skicka in en gnista!
                         </p>
