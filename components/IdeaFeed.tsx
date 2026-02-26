@@ -26,19 +26,20 @@ export default function IdeaFeed() {
     // ── Filter-state (för managers) ────────────────────────────
     const [stationFilter, setStationFilter] = useState<string>("");
 
-    // ── Filter-state (för alla): Visa genomförda? ──────────────
-    const [showCompleted, setShowCompleted] = useState(false);
+    // ── Filter-state (Flöde) ───────────────────────────────────
+    const [activeTab, setActiveTab] = useState<"ideas" | "polls">("ideas");
 
     // Hämta idéer (med eventuellt filter)
-    const ideas = useQuery(api.ideas.getIdeas, {
+    // NOTE: vi skickar *inte* showCompleted längre, så getIdeas returnerar pågående
+    const allIdeas = useQuery(api.ideas.getIdeas, {
         station: stationFilter || undefined,
-        showCompleted: showCompleted || undefined
+        // showCompleted: false (default in backend is active only)
     });
 
     const castVote = useMutation(api.votes.castVote);
 
     // ── Laddningsläge ──────────────────────────────────────────
-    if (ideas === undefined) {
+    if (allIdeas === undefined) {
         return (
             <div className="w-full max-w-2xl mx-auto px-4 py-12 text-center">
                 <div className="animate-pulse space-y-6">
@@ -53,6 +54,17 @@ export default function IdeaFeed() {
             </div>
         );
     }
+
+    // Filtrera fram rätt lista lokalt
+    const ideas = allIdeas.filter(idea => {
+        if (activeTab === "ideas") {
+            // Visa allt som INTE är "poll" (gamla poster saknar fält, så vi litar på det)
+            return idea.type !== "poll";
+        } else {
+            // activeTab === "polls"
+            return idea.type === "poll";
+        }
+    });
 
     return (
         <div className="w-full max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -72,28 +84,30 @@ export default function IdeaFeed() {
             </div>
 
             <p className="text-slate-500 text-sm -mt-3">
-                Stötta idéer du tror på. {SUPPORT_THRESHOLD} stöttningar → skarp omröstning.
+                {activeTab === "ideas"
+                    ? `Stötta idéer du tror på. ${SUPPORT_THRESHOLD} stöttningar → skarp omröstning.`
+                    : "Skarp omröstning från chefer, säg vad du tycker!"}
             </p>
 
-            {/* ── Flikar: Pågående / Genomförda ─────────────────── */}
+            {/* ── Flikar: Förslag / Polls ──────────────────────────── */}
             <div className="flex p-1 bg-slate-100 rounded-xl">
                 <button
-                    onClick={() => setShowCompleted(false)}
-                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${!showCompleted
-                        ? "bg-white text-slate-800 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
+                    onClick={() => setActiveTab("ideas")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === "ideas"
+                            ? "bg-white text-slate-800 shadow-sm"
+                            : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                         }`}
                 >
-                    🔥 Pågående
+                    💡 Förslag
                 </button>
                 <button
-                    onClick={() => setShowCompleted(true)}
-                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${showCompleted
-                        ? "bg-white text-slate-800 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
+                    onClick={() => setActiveTab("polls")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === "polls"
+                            ? "bg-white text-slate-800 shadow-sm"
+                            : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                         }`}
                 >
-                    ✅ Genomförda
+                    📊 Polls
                 </button>
             </div>
 
@@ -101,16 +115,18 @@ export default function IdeaFeed() {
             {ideas.length === 0 ? (
                 <div className="w-full py-16 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                     <span className="text-4xl block mb-3">
-                        {showCompleted ? "📭" : "👻"}
+                        {activeTab === "polls" ? "📊" : "👻"}
                     </span>
                     <h2 className="text-lg font-medium text-slate-600">
-                        {showCompleted
-                            ? "Inga genomförda idéer än"
+                        {activeTab === "polls"
+                            ? stationFilter
+                                ? `Inga aktuella omröstningar från chefer för ${stationFilter}`
+                                : "Inga aktuella omröstningar från chefer"
                             : stationFilter
                                 ? `Inga pågående idéer för ${stationFilter}`
                                 : "Inga pågående idéer just nu"}
                     </h2>
-                    {!showCompleted && (
+                    {activeTab === "ideas" && (
                         <p className="text-slate-400 text-sm mt-1">
                             Var den första att skicka in en gnista!
                         </p>
@@ -172,6 +188,7 @@ function StationFilter({
 type Idea = {
     _id: Id<"ideas">;
     _creationTime: number;
+    type?: string;          // "idea" eller "poll" (undefined hanteras oftast som "idea")
     title: string;
     description: string;
     perfectState?: string;

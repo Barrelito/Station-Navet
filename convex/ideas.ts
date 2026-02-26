@@ -240,6 +240,7 @@ export const submitIdea = mutation({
 
         // ── 5. Spara idén ─────────────────────────────────────────
         const ideaId = await ctx.db.insert("ideas", {
+            type: "idea",
             title: args.title,
             description: args.description,
             perfectState: args.perfectState,

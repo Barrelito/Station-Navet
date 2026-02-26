@@ -38,6 +38,12 @@ export default defineSchema({
   // ─── Idéer ───────────────────────────────────────────────────
   // Kärnan i flödet: Idé → Intressekoll → Omröstning → Verkstad.
   ideas: defineTable({
+    type: v.optional(
+      v.union(
+        v.literal("idea"),
+        v.literal("poll")
+      )
+    ),
     title: v.string(),
     description: v.string(),
     perfectState: v.optional(v.string()),    // Vision: "Hur ser det ut när det är klart?"
@@ -61,6 +67,7 @@ export default defineSchema({
     ),
   })
     .index("by_status", ["status"])
+    .index("by_type", ["type"])
     .index("by_author", ["authorId"])
     .index("by_target", ["targetAudience"]),
 

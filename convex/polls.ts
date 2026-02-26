@@ -78,6 +78,7 @@ export const createPoll = mutation({
 
         // 4. Spara (direkt till voting)
         const ideaId = await ctx.db.insert("ideas", {
+            type: "poll",
             title: args.title,
             description: args.description,
             // perfectState & resourceNeeds är optional nu
