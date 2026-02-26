@@ -147,9 +147,17 @@ export default function NotificationBell() {
                             <ul className="divide-y divide-slate-50">
                                 {notifications.map((n) => (
                                     <li key={n._id}>
-                                        <button
+                                        <div
+                                            role="button"
+                                            tabIndex={0}
                                             onClick={() => handleNotificationClick(n)}
-                                            className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex gap-3 ${!n.isRead ? "bg-blue-50/50" : ""
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
+                                                    handleNotificationClick(n);
+                                                }
+                                            }}
+                                            className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex gap-3 cursor-pointer ${!n.isRead ? "bg-blue-50/50" : ""
                                                 }`}
                                         >
                                             <div className="flex-shrink-0 mt-1">
@@ -178,7 +186,7 @@ export default function NotificationBell() {
                                                     <span className="block w-2 h-2 bg-blue-500 rounded-full"></span>
                                                 </div>
                                             )}
-                                        </button>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>
