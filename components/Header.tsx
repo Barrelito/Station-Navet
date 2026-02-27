@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { UserButton } from "@clerk/nextjs";
-import { useMutation } from "convex/react";
+import { useMutation, useConvexAuth } from "convex/react";
 import { api } from "../convex/_generated/api";
 import StationSelector from "./StationSelector";
 import NotificationBell from "./NotificationBell";
@@ -17,17 +17,20 @@ import Link from "next/link";
  * Glasmorfism-effekt med backdrop-blur för modern känsla.
  */
 export default function Header() {
+    const { isAuthenticated } = useConvexAuth();
     const ensureUser = useMutation(api.users.ensureUserExists);
 
-    // Skapa user-post vid första inloggningen
+    // Skapa user-post vid första inloggningen, men bara om vi är autentiserade
     useEffect(() => {
-        ensureUser().catch((err) => {
-            // Ignorera fel om användaren inte är inloggad
-            if (!err.message?.includes("Inte inloggad")) {
-                console.error("Kunde inte skapa användare:", err);
-            }
-        });
-    }, [ensureUser]);
+        if (isAuthenticated) {
+            ensureUser().catch((err) => {
+                // Ignorera fel om användaren inte är inloggad
+                if (!err.message?.includes("Inte inloggad")) {
+                    console.error("Kunde inte skapa användare:", err);
+                }
+            });
+        }
+    }, [ensureUser, isAuthenticated]);
 
     return (
         <>
