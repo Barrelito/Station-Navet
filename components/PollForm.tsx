@@ -7,6 +7,7 @@ import { getStationArea, getRegion, getStationsInArea } from "../lib/org-structu
 
 export default function PollForm() {
     const currentUser = useQuery(api.users.getCurrentUser);
+    const organizations = useQuery(api.organizations.getOrganizations);
     const createPoll = useMutation(api.polls.createPoll); // Vi måste exponera denna i api
 
     const [title, setTitle] = useState("");
@@ -24,11 +25,11 @@ export default function PollForm() {
             // Default audience logic (Samma som IdeaForm, flytta till hook sen?)
             let finalTargetAudience = targetAudience || currentUser?.station || "";
             if (currentUser?.role === "area_manager" && !targetAudience) {
-                const area = getStationArea(currentUser.station || "");
+                const area = getStationArea(organizations || [], currentUser.station || "");
                 finalTargetAudience = area || currentUser.station || "";
             }
             if (currentUser?.role === "region_manager" && !targetAudience) {
-                const region = getRegion(currentUser.station || "");
+                const region = getRegion(organizations || [], currentUser.station || "");
                 finalTargetAudience = region || currentUser.station || "";
             }
 
@@ -52,6 +53,14 @@ export default function PollForm() {
             setIsSubmitting(false);
         }
     };
+
+    if (organizations === undefined) {
+        return (
+            <div className="w-full max-w-2xl mx-auto px-4 py-12 text-center">
+                <p className="text-slate-400 mt-6 text-sm">Laddar formulär...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-2xl mx-auto px-4 py-8">
@@ -126,15 +135,15 @@ export default function PollForm() {
                         >
                             <option value={currentUser.station}>🏠 Min station ({currentUser.station})</option>
                             {(() => {
-                                const area = getStationArea(currentUser.station || "");
+                                const area = getStationArea(organizations, currentUser.station || "");
                                 return area ? <option value={area}>🗺️ Hela området ({area})</option> : null;
                             })()}
                         </select>
                     </div>
                 )}
                 {currentUser?.role === "area_manager" && (() => {
-                    const userArea = currentUser.area || getStationArea(currentUser.station || "");
-                    const stationsInArea = userArea ? getStationsInArea(userArea) : [];
+                    const userArea = currentUser.area || getStationArea(organizations, currentUser.station || "");
+                    const stationsInArea = userArea ? getStationsInArea(organizations, userArea) : [];
                     return (
                         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-5">
                             <div className="flex items-center gap-3 mb-1">

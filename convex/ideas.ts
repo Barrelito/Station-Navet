@@ -9,7 +9,7 @@ import {
     getStationsInArea,
     getAllStationsInRegion,
     getAllAreasInRegion,
-} from "../lib/org-structure";
+} from "./org_helpers";
 
 // ─── Statuskonstanter som INTE ska visas i feeden ──────────
 const HIDDEN_STATUSES = ["draft", "archived"] as const;
@@ -54,8 +54,8 @@ export const getIdeas = query({
 
         // Alla ser sin egen station + område + region
         const userStation = user.station;
-        const userArea = getStationArea(userStation);
-        const userRegion = getRegion(userStation);
+        const userArea = await getStationArea(ctx, userStation);
+        const userRegion = await getRegion(ctx, userStation);
 
         allowedTargets.push(userStation);
         if (userArea) allowedTargets.push(userArea);
@@ -64,14 +64,14 @@ export const getIdeas = query({
         // ── 2b. Utöka synlighet för area/region managers ─────────
         // Area managers ser alla stationer i sitt område
         if (user.role === "area_manager" && userArea) {
-            const stationsInArea = getStationsInArea(userArea);
+            const stationsInArea = await getStationsInArea(ctx, userArea);
             allowedTargets.push(...stationsInArea);
         }
 
         // Region managers ser alla stationer och områden i sin region
         if (user.role === "region_manager" && userRegion) {
-            const allStationsInRegion = getAllStationsInRegion(userRegion);
-            const allAreasInRegion = getAllAreasInRegion(userRegion);
+            const allStationsInRegion = await getAllStationsInRegion(ctx, userRegion);
+            const allAreasInRegion = await getAllAreasInRegion(ctx, userRegion);
             allowedTargets.push(...allStationsInRegion, ...allAreasInRegion);
         }
 
@@ -80,6 +80,14 @@ export const getIdeas = query({
             .query("ideas")
             .order("desc") // Nyaste _creationTime först
             .collect();
+
+        // ── 3b. Förbered stationsfilter ────────────────────────────
+        let relevantForStation: string[] = [];
+        if (args.station) {
+            const filterArea = await getStationArea(ctx, args.station);
+            const filterRegion = await getRegion(ctx, args.station);
+            relevantForStation = [args.station, filterArea, filterRegion].filter(Boolean) as string[];
+        }
 
         // ── 4. Filtrera baserat på hierarki och status ────────────
         return allIdeas.filter((idea) => {
@@ -112,15 +120,6 @@ export const getIdeas = query({
                 }
 
                 // Vilka targets är relevanta för den VALDA stationen?
-                const filterArea = getStationArea(args.station);
-                const filterRegion = getRegion(args.station);
-
-                const relevantForStation = [
-                    args.station,
-                    filterArea,
-                    filterRegion
-                ].filter(Boolean);
-
                 return relevantForStation.includes(idea.targetAudience);
             }
 
@@ -174,8 +173,8 @@ export const submitIdea = mutation({
 
         // ── 3. Validera targetAudience baserat på roll ────────────
         let validatedTargetAudience = args.targetAudience;
-        const userArea = getStationArea(user.station);
-        const userRegion = getRegion(user.station);
+        const userArea = await getStationArea(ctx, user.station);
+        const userRegion = await getRegion(ctx, user.station);
 
         const validTargets: string[] = [];
 
@@ -204,7 +203,7 @@ export const submitIdea = mutation({
             validTargets.push(actualUserArea);
 
             // Tillåt alla stationer i området
-            const stationsInArea = getStationsInArea(actualUserArea);
+            const stationsInArea = await getStationsInArea(ctx, actualUserArea);
             validTargets.push(...stationsInArea);
 
             if (!validTargets.includes(args.targetAudience)) {
@@ -230,9 +229,11 @@ export const submitIdea = mutation({
 
         // ── 4. Beräkna scope automatiskt ──────────────────────────
         let scope: "station" | "area" | "region";
-        if (getAllStations().includes(validatedTargetAudience)) {
+        const allStations = await getAllStations(ctx);
+        const allAreas = await getAllAreas(ctx);
+        if (allStations.includes(validatedTargetAudience)) {
             scope = "station";
-        } else if (getAllAreas().includes(validatedTargetAudience)) {
+        } else if (allAreas.includes(validatedTargetAudience)) {
             scope = "area";
         } else {
             scope = "region";
@@ -263,30 +264,23 @@ export const submitIdea = mutation({
 
         let usersToNotify = await ctx.db.query("users").collect(); // Borde filtreras mer effektivt
 
-        usersToNotify = usersToNotify.filter(u => {
-            if (u._id === user._id) return false; // Inte till sig själv
+        const usersToNotifyFiltered: any[] = [];
+        for (const u of usersToNotify) {
+            if (u._id === user._id) continue;
 
-            // Kolla om användaren "hör till" målgruppen
-            const uArea = getStationArea(u.station || "");
-            const uRegion = getRegion(u.station || "");
+            const uArea = await getStationArea(ctx, u.station || "");
+            const uRegion = await getRegion(ctx, u.station || "");
 
-            // Om idén är för en station:
-            if (scope === "station") {
-                return u.station === validatedTargetAudience;
+            if (scope === "station" && u.station === validatedTargetAudience) {
+                usersToNotifyFiltered.push(u);
+            } else if (scope === "area" && uArea === validatedTargetAudience) {
+                usersToNotifyFiltered.push(u);
+            } else if (scope === "region" && uRegion === validatedTargetAudience) {
+                usersToNotifyFiltered.push(u);
             }
-            // Om idén är för ett område:
-            if (scope === "area") {
-                return uArea === validatedTargetAudience; // De i området
-                // (Eller stationer i området - vilket uArea täcker om vi har rätt logik)
-            }
-            // Om idén är för en region:
-            if (scope === "region") {
-                return uRegion === validatedTargetAudience;
-            }
-            return false;
-        });
+        }
 
-        const userIdsToNotify = usersToNotify.map(u => u._id);
+        const userIdsToNotify = usersToNotifyFiltered.map(u => u._id);
 
         if (userIdsToNotify.length > 0) {
             await ctx.scheduler.runAfter(0, internal.notifications.sendNotification, {

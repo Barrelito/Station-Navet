@@ -7,7 +7,7 @@ import {
     getAllStations,
     getAllAreas,
     getStationsInArea,
-} from "../lib/org-structure";
+} from "./org_helpers";
 
 /**
  * createPoll – Skapar en omröstning (direkt till voting).
@@ -41,8 +41,8 @@ export const createPoll = mutation({
         }
 
         // 2. Validera targetAudience (återanvänder logik från ideas.ts men förenklad)
-        const userArea = getStationArea(user.station || "");
-        const userRegion = getRegion(user.station || "");
+        const userArea = await getStationArea(ctx, user.station || "");
+        const userRegion = await getRegion(ctx, user.station || "");
         const validTargets: string[] = [];
 
         if (user.role === "station_manager") {
@@ -52,7 +52,8 @@ export const createPoll = mutation({
             const area = user.area || userArea;
             if (area) {
                 validTargets.push(area);
-                validTargets.push(...getStationsInArea(area));
+                const stationsInArea = await getStationsInArea(ctx, area);
+                validTargets.push(...stationsInArea);
             }
         } else if (user.role === "region_manager") {
             if (userRegion) validTargets.push(userRegion);
@@ -68,9 +69,12 @@ export const createPoll = mutation({
 
         // 3. Beräkna scope
         let scope: "station" | "area" | "region";
-        if (getAllStations().includes(args.targetAudience)) {
+        const allStations = await getAllStations(ctx);
+        const allAreas = await getAllAreas(ctx);
+
+        if (allStations.includes(args.targetAudience)) {
             scope = "station";
-        } else if (getAllAreas().includes(args.targetAudience)) {
+        } else if (allAreas.includes(args.targetAudience)) {
             scope = "area";
         } else {
             scope = "region";
@@ -92,18 +96,23 @@ export const createPoll = mutation({
         // 5. Notiser (Copy-paste logik från ideas.ts men anpassad text)
         // TODO: Refactor notification logic to shared helper later if needed
         let usersToNotify = await ctx.db.query("users").collect();
-        usersToNotify = usersToNotify.filter(u => {
-            if (u._id === user._id) return false;
-            const uArea = getStationArea(u.station || "");
-            const uRegion = getRegion(u.station || "");
+        const usersToNotifyFiltered: any[] = [];
 
-            if (scope === "station") return u.station === args.targetAudience;
-            if (scope === "area") return uArea === args.targetAudience;
-            if (scope === "region") return uRegion === args.targetAudience;
-            return false;
-        });
+        for (const u of usersToNotify) {
+            if (u._id === user._id) continue;
+            const uArea = await getStationArea(ctx, u.station || "");
+            const uRegion = await getRegion(ctx, u.station || "");
 
-        const userIdsToNotify = usersToNotify.map(u => u._id);
+            if (scope === "station" && u.station === args.targetAudience) {
+                usersToNotifyFiltered.push(u);
+            } else if (scope === "area" && uArea === args.targetAudience) {
+                usersToNotifyFiltered.push(u);
+            } else if (scope === "region" && uRegion === args.targetAudience) {
+                usersToNotifyFiltered.push(u);
+            }
+        }
+
+        const userIdsToNotify = usersToNotifyFiltered.map(u => u._id);
         if (userIdsToNotify.length > 0) {
             await ctx.scheduler.runAfter(0, internal.notifications.sendNotification, {
                 userIds: userIdsToNotify,

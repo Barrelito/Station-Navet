@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getStationArea, getRegion } from "../lib/org-structure";
+import { getStationArea, getRegion } from "./org_helpers";
 
 // ─── Tröskelvärde: antal stöttningar för att nå omröstning ──
 const SUPPORT_THRESHOLD = 3;
@@ -140,24 +140,22 @@ export const getVoteStats = query({
 
             // Filtrera users baserat på scope och targetAudience
             // Vi återanvänder logiken från `ideas.ts` men förenklat
-            const eligibleUsers = allUsers.filter(u => {
+            const eligibleUsers: any[] = [];
+            for (const u of allUsers) {
                 const uStation = u.station || "";
-                const uArea = getStationArea(uStation);
-                const uRegion = getRegion(uStation);
+                const uArea = await getStationArea(ctx, uStation);
+                const uRegion = await getRegion(ctx, uStation);
 
                 if (idea.scope === "station") {
-                    return uStation === idea.targetAudience;
-                }
-                if (idea.scope === "area") {
+                    if (uStation === idea.targetAudience) eligibleUsers.push(u);
+                } else if (idea.scope === "area") {
                     // Alla i området (inklusive de stationer som ingår)
-                    return uArea === idea.targetAudience || u.area === idea.targetAudience;
-                }
-                if (idea.scope === "region") {
+                    if (uArea === idea.targetAudience || u.area === idea.targetAudience) eligibleUsers.push(u);
+                } else if (idea.scope === "region") {
                     // Alla i regionen
-                    return uRegion === idea.targetAudience || u.region === idea.targetAudience;
+                    if (uRegion === idea.targetAudience || u.region === idea.targetAudience) eligibleUsers.push(u);
                 }
-                return false;
-            });
+            }
 
             totalEligible = eligibleUsers.length;
         }

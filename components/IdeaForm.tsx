@@ -14,8 +14,9 @@ import { getStationArea, getRegion, getStationsInArea } from "../lib/org-structu
  * Mobile First · Tailwind CSS · Shadcn UI-tänk
  */
 export default function IdeaForm() {
-    // ── Hämta current user ─────────────────────────────────────
+    // ── Hämta current user & orgs ─────────────────────────────────────
     const currentUser = useQuery(api.users.getCurrentUser);
+    const organizations = useQuery(api.organizations.getOrganizations);
 
     // ── Formulärstate ───────────────────────────────────────────
     const [title, setTitle] = useState("");
@@ -43,13 +44,13 @@ export default function IdeaForm() {
 
             // För area_manager: default till område
             if (currentUser?.role === "area_manager" && !targetAudience) {
-                const area = getStationArea(currentUser.station || "");
+                const area = getStationArea(organizations || [], currentUser.station || "");
                 finalTargetAudience = area || currentUser.station || "";
             }
 
             // För region_manager: default till region
             if (currentUser?.role === "region_manager" && !targetAudience) {
-                const region = getRegion(currentUser.station || "");
+                const region = getRegion(organizations || [], currentUser.station || "");
                 finalTargetAudience = region || currentUser.station || "";
             }
 
@@ -80,6 +81,14 @@ export default function IdeaForm() {
             setIsSubmitting(false);
         }
     };
+
+    if (organizations === undefined) {
+        return (
+            <div className="w-full max-w-2xl mx-auto px-4 py-12 text-center">
+                <p className="text-slate-400 mt-6 text-sm">Laddar formulär...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-2xl mx-auto px-4 py-8">
@@ -250,7 +259,7 @@ export default function IdeaForm() {
                                     🏠 Min station ({currentUser.station})
                                 </option>
                                 {(() => {
-                                    const area = getStationArea(currentUser.station || "");
+                                    const area = getStationArea(organizations, currentUser.station || "");
                                     return area ? (
                                         <option value={area}>
                                             🗺️ Hela området ({area})
@@ -263,8 +272,8 @@ export default function IdeaForm() {
                 )}
 
                 {currentUser?.role === "area_manager" && (() => {
-                    const userArea = currentUser.area || getStationArea(currentUser.station || "");
-                    const stationsInArea = userArea ? getStationsInArea(userArea) : [];
+                    const userArea = currentUser.area || getStationArea(organizations, currentUser.station || "");
+                    const stationsInArea = userArea ? getStationsInArea(organizations, userArea) : [];
 
                     return (
                         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-5">
@@ -322,7 +331,7 @@ export default function IdeaForm() {
                             <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3">
                                 <p className="text-sm font-medium text-purple-800">
                                     🌍 Hela regionen ({(() => {
-                                        const region = getRegion(currentUser.station || "");
+                                        const region = getRegion(organizations, currentUser.station || "");
                                         return region || "Okänd region";
                                     })()})
                                 </p>

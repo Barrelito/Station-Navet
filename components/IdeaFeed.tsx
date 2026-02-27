@@ -22,6 +22,7 @@ const SUPPORT_THRESHOLD = 3;
 export default function IdeaFeed({ isHistoryView = false }: { isHistoryView?: boolean }) {
     // ── Hämta användare för att kolla behörighet ───────────────
     const currentUser = useQuery(api.users.getCurrentUser);
+    const organizations = useQuery(api.organizations.getOrganizations);
 
     // ── Filter-state (för managers) ────────────────────────────
     const [stationFilter, setStationFilter] = useState<string>("");
@@ -39,7 +40,7 @@ export default function IdeaFeed({ isHistoryView = false }: { isHistoryView?: bo
     const castVote = useMutation(api.votes.castVote);
 
     // ── Laddningsläge ──────────────────────────────────────────
-    if (allIdeas === undefined) {
+    if (allIdeas === undefined || organizations === undefined) {
         return (
             <div className="w-full max-w-2xl mx-auto px-4 py-12 text-center">
                 <div className="animate-pulse space-y-6">
@@ -86,6 +87,7 @@ export default function IdeaFeed({ isHistoryView = false }: { isHistoryView?: bo
                 {(currentUser?.role === "area_manager" || currentUser?.role === "region_manager") && (
                     <StationFilter
                         currentUser={currentUser}
+                        organizations={organizations}
                         value={stationFilter}
                         onChange={setStationFilter}
                     />
@@ -158,23 +160,24 @@ export default function IdeaFeed({ isHistoryView = false }: { isHistoryView?: bo
 
 function StationFilter({
     currentUser,
+    organizations,
     value,
     onChange
 }: {
     currentUser: any;
+    organizations: any[];
     value: string;
     onChange: (val: string) => void;
 }) {
-    // Räkna ut vilka stationer som kan väljas
     const stations = (() => {
         if (currentUser.role === "area_manager") {
-            const area = currentUser.area || getStationArea(currentUser.station || "");
-            return area ? getStationsInArea(area) : [];
+            const area = currentUser.area || getStationArea(organizations, currentUser.station || "");
+            return area ? getStationsInArea(organizations, area) : [];
         }
         if (currentUser.role === "region_manager") {
             // För regionchefer, visa alla i regionen
             // (Här skulle vi kunna gruppera per område, men en platt lista funkar för nu)
-            return currentUser.region ? getAllStationsInRegion(currentUser.region) : [];
+            return currentUser.region ? getAllStationsInRegion(organizations, currentUser.region) : [];
         }
         return [];
     })();

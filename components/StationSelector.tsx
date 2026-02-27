@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { orgStructure } from "../lib/org-structure";
+import { buildOrgTree } from "../lib/org-structure";
 
 /**
  * StationSelector – Dialog för första inloggning
@@ -13,15 +13,18 @@ import { orgStructure } from "../lib/org-structure";
  */
 export default function StationSelector() {
     const user = useQuery(api.users.getCurrentUser);
+    const organizations = useQuery(api.organizations.getOrganizations);
     const updateStation = useMutation(api.users.updateUserStation);
 
     const [selectedStation, setSelectedStation] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // ── Laddar användare ──────────────────────────────────────
-    if (user === undefined) {
+    // ── Laddar användare & orgs ──────────────────────────────────────
+    if (user === undefined || organizations === undefined) {
         return null; // Laddar fortfarande
     }
+
+    const orgStructure = buildOrgTree(organizations);
 
     // ── Användaren har redan valt station ─────────────────────
     if (user === null || user.station) {
@@ -82,8 +85,8 @@ export default function StationSelector() {
                                 region.areas.map((area) => (
                                     <optgroup key={area.name} label={`${area.name} (${region.name})`}>
                                         {area.stations.map((station) => (
-                                            <option key={station} value={station}>
-                                                {station}
+                                            <option key={station.name} value={station.name}>
+                                                {station.name}
                                             </option>
                                         ))}
                                     </optgroup>
