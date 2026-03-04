@@ -1,25 +1,6 @@
-import { query, mutation, QueryCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-
-// ─── Helper: Kontrollera om användaren är admin ────────────
-async function requireAdmin(ctx: any) {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-        throw new Error("Du måste vara inloggad.");
-    }
-
-    const user = await ctx.db
-        .query("users")
-        // @ts-expect-error - Convex query builder types
-        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-        .unique();
-
-    if (!user || user.role !== "admin") {
-        throw new Error("Endast administratörer har tillgång till denna funktion.");
-    }
-
-    return user;
-}
+import { requireAdmin } from "./helpers";
 
 // ─── Queries ─────────────────────────────────────────────────
 

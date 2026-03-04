@@ -8,6 +8,7 @@ import {
     getAllAreas,
     getStationsInArea,
 } from "./org_helpers";
+import { getUsersToNotify } from "./helpers";
 
 /**
  * createPoll – Skapar en omröstning (direkt till voting).
@@ -93,26 +94,8 @@ export const createPoll = mutation({
             scope,
         });
 
-        // 5. Notiser (Copy-paste logik från ideas.ts men anpassad text)
-        // TODO: Refactor notification logic to shared helper later if needed
-        let usersToNotify = await ctx.db.query("users").collect();
-        const usersToNotifyFiltered: any[] = [];
-
-        for (const u of usersToNotify) {
-            if (u._id === user._id) continue;
-            const uArea = await getStationArea(ctx, u.station || "");
-            const uRegion = await getRegion(ctx, u.station || "");
-
-            if (scope === "station" && u.station === args.targetAudience) {
-                usersToNotifyFiltered.push(u);
-            } else if (scope === "area" && uArea === args.targetAudience) {
-                usersToNotifyFiltered.push(u);
-            } else if (scope === "region" && uRegion === args.targetAudience) {
-                usersToNotifyFiltered.push(u);
-            }
-        }
-
-        const userIdsToNotify = usersToNotifyFiltered.map(u => u._id);
+        // 5. Notiser
+        const userIdsToNotify = await getUsersToNotify(ctx, scope, args.targetAudience, user._id);
         if (userIdsToNotify.length > 0) {
             await ctx.scheduler.runAfter(0, internal.notifications.sendNotification, {
                 userIds: userIdsToNotify,

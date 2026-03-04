@@ -10,6 +10,7 @@ import {
     getAllStationsInRegion,
     getAllAreasInRegion,
 } from "./org_helpers";
+import { getUsersToNotify } from "./helpers";
 
 // ─── Statuskonstanter som INTE ska visas i feeden ──────────
 const HIDDEN_STATUSES = ["draft", "archived"] as const;
@@ -253,34 +254,8 @@ export const submitIdea = mutation({
             scope,
         });
 
-        // ── 6. Skicka notiser ─────────────────────────────────────
-        // Vi måste hitta vilka som ska få notisen.
-        // För MVP: Skicka till ALLA i hela scopet.
-        // Hitta användare som matchar scopet.
-
-        // Detta kan vara tungt om det är många användare, så vi gör det i en internal mutation
-        // eller schemalägger det (scheduler). För nu, gör vi en enkel query här.
-        // OBS: Detta skalar inte för 1000-tals användare direkt här, men funkar för MVP.
-
-        let usersToNotify = await ctx.db.query("users").collect(); // Borde filtreras mer effektivt
-
-        const usersToNotifyFiltered: any[] = [];
-        for (const u of usersToNotify) {
-            if (u._id === user._id) continue;
-
-            const uArea = await getStationArea(ctx, u.station || "");
-            const uRegion = await getRegion(ctx, u.station || "");
-
-            if (scope === "station" && u.station === validatedTargetAudience) {
-                usersToNotifyFiltered.push(u);
-            } else if (scope === "area" && uArea === validatedTargetAudience) {
-                usersToNotifyFiltered.push(u);
-            } else if (scope === "region" && uRegion === validatedTargetAudience) {
-                usersToNotifyFiltered.push(u);
-            }
-        }
-
-        const userIdsToNotify = usersToNotifyFiltered.map(u => u._id);
+        // ── 6. Skicka notiser ──────────────────────────────────────────────────────────────────────
+        const userIdsToNotify = await getUsersToNotify(ctx, scope, validatedTargetAudience, user._id);
 
         if (userIdsToNotify.length > 0) {
             await ctx.scheduler.runAfter(0, internal.notifications.sendNotification, {

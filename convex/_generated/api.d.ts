@@ -9,6 +9,7 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as helpers from "../helpers.js";
 import type * as ideas from "../ideas.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
@@ -29,6 +30,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  helpers: typeof helpers;
   ideas: typeof ideas;
   migrations: typeof migrations;
   notifications: typeof notifications;

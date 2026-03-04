@@ -1,7 +1,5 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import Header from "../../components/Header";
 import IdeaFeed from "../../components/IdeaFeed";
 import Link from "next/link";
