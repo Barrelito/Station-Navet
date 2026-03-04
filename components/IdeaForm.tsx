@@ -127,7 +127,7 @@ export default function IdeaForm() {
                             id="title"
                             type="text"
                             required
-                            placeholder="T.ex. 'Bättre rutin för lämcing av utrustning'"
+                            placeholder="T.ex. 'Bättre rutin för lämning av utrustning'"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             disabled={isSubmitting}

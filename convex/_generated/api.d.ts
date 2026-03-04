@@ -12,6 +12,7 @@ import type * as admin from "../admin.js";
 import type * as ideas from "../ideas.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
+import type * as org_helpers from "../org_helpers.js";
 import type * as organizations from "../organizations.js";
 import type * as polls from "../polls.js";
 import type * as push from "../push.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   ideas: typeof ideas;
   migrations: typeof migrations;
   notifications: typeof notifications;
+  org_helpers: typeof org_helpers;
   organizations: typeof organizations;
   polls: typeof polls;
   push: typeof push;

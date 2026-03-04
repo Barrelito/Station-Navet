@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, internalMutation } from "./_generated/server";
 
 /**
  * seedOrganizations – Migrera hårdkodad org-struktur till databas.
@@ -12,7 +12,7 @@ export const seedOrganizations = mutation({
     },
 });
 
-export const migratePolls = mutation({
+export const migratePolls = internalMutation({
     args: {},
     handler: async (ctx) => {
         // Hämta alla idéer

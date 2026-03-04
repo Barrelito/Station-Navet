@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import { subscribeToPush } from "../lib/push-client";
 
 export default function NotificationBell() {
@@ -37,12 +37,9 @@ export default function NotificationBell() {
     const handleEnablePush = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('handleEnablePush clicked');
         setIsLoading(true);
         try {
-            console.log('Calling subscribeToPush...');
             const result = await subscribeToPush(saveSubscription);
-            console.log('subscribeToPush result:', result);
             if (result) {
                 setPushEnabled(true);
                 alert("Push-notiser är nu aktiverade! 🎉");
@@ -50,7 +47,7 @@ export default function NotificationBell() {
                 alert("Kunde inte aktivera notiser. Kontrollera behörigheter eller försök igen senare.");
             }
         } catch (err) {
-            console.error('Error in handleEnablePush:', err);
+            console.error('Fel vid aktivering av push:', err);
             alert("Ett fel uppstod.");
         } finally {
             setIsLoading(false);

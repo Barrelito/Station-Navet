@@ -19,10 +19,6 @@ export default function StationSelector() {
     const [selectedStation, setSelectedStation] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // ── Laddar användare & orgs ──────────────────────────────────────
-    console.log("[StationSelector] user:", user);
-    console.log("[StationSelector] orgs:", organizations);
-
     if (user === undefined || organizations === undefined) {
         return null; // Laddar fortfarande
     }

@@ -161,9 +161,8 @@ export default function WorkshopCard({
                         </div>
                     </div>
 
-                    {/* "Markera som färdig"-knapp (visas alltid i MVP,
-              i produktion: kolla att inloggad user === ownerId) */}
-                    {task && (
+                    {/* Markera som färdig: Visa bara för ägaren eller chef/admin */}
+                    {task && (currentUser?._id === task.ownerId || ["station_manager", "area_manager", "region_manager", "admin"].includes(currentUser?.role)) && (
                         <button
                             onClick={() =>
                                 handleAction(

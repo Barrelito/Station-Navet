@@ -112,11 +112,27 @@ export const completeTask = mutation({
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) throw new Error("Du måste vara inloggad.");
 
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_token", (q) =>
+                q.eq("tokenIdentifier", identity.tokenIdentifier)
+            )
+            .unique();
+
+        if (!user) throw new Error("Användarprofil saknas. Kontakta admin.");
+
         const task = await ctx.db.get(args.taskId);
         if (!task) throw new Error("Uppgiften hittades inte.");
 
         if (task.status === "done") {
             throw new Error("Uppgiften är redan markerad som klar.");
+        }
+
+        // ── Behörighetskontroll ───────────────────────────────────
+        // Endast taskens ägare ELLER en chef/admin får markera som klar.
+        const isManager = ["station_manager", "area_manager", "region_manager", "admin"].includes(user.role);
+        if (task.ownerId !== user._id && !isManager) {
+            throw new Error("Endast den som äger uppgiften kan markera den som klar.");
         }
 
         // Markera task som klar

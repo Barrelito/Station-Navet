@@ -1,5 +1,4 @@
 
-
 const PUBLIC_VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 if (!PUBLIC_VAPID_KEY) {
@@ -28,55 +27,41 @@ function urlBase64ToUint8Array(base64String: string) {
  * Registrera Service Worker och prenumerera på push.
  */
 export async function subscribeToPush(saveSubscriptionMutation: any) {
-    console.log('Starting push subscription process...');
-
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.error('Push missing support: serviceWorker or PushManager missing');
+        console.error('Push saknar stöd: serviceWorker eller PushManager saknas');
         return false;
     }
 
     try {
         // 1. Registrera SW
-        console.log('Registering service worker...');
         const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('SW registered:', registration);
 
         // 2. Vänta tills SW är redo
-        console.log('Waiting for SW ready...');
         await navigator.serviceWorker.ready;
-        console.log('SW Ready');
 
-        // 3. Begär tillåtelse (viktigt!)
-        console.log('Requesting permission...');
+        // 3. Begär tillåtelse
         const permission = await Notification.requestPermission();
-        console.log('Permission result:', permission);
 
         if (permission !== 'granted') {
-            console.warn('Notification permission denied, got:', permission);
             return false;
         }
 
         // 4. Prenumerera
         const vapidKey = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '').trim();
         if (!vapidKey) {
-            console.error("Missing VAPID public key. Check NEXT_PUBLIC_VAPID_PUBLIC_KEY in .env.local");
+            console.error("Saknar VAPID public key. Kontrollera NEXT_PUBLIC_VAPID_PUBLIC_KEY i .env.local");
             return false;
         }
 
-        console.log('Subscribing with VAPID key length:', vapidKey.length);
         const applicationServerKey = urlBase64ToUint8Array(vapidKey);
-        console.log('Converted applicationServerKey length:', applicationServerKey.length);
 
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey
         });
 
-        console.log('Push subscription success:', subscription);
-
         // 5. Spara i db
         const subJson = subscription.toJSON();
-        console.log('Saving subscription to DB...');
         await saveSubscriptionMutation({
             endpoint: subJson.endpoint!,
             keys: {
@@ -85,10 +70,9 @@ export async function subscribeToPush(saveSubscriptionMutation: any) {
             }
         });
 
-        console.log('Subscription saved to DB');
         return true;
     } catch (error) {
-        console.error('Failed to subscribe to push:', error);
+        console.error('Misslyckades att prenumerera på push:', error);
         return false;
     }
 }

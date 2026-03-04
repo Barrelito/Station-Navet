@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import Header from "../components/Header";
 import IdeaForm from "../components/IdeaForm";
-import PollForm from "../components/PollForm"; // Ny komponent
+import PollForm from "../components/PollForm";
 import IdeaFeed from "../components/IdeaFeed";
+import Link from "next/link";
 
 /**
  * Stationens Dashboard – Huvudsidan
@@ -19,15 +19,7 @@ import IdeaFeed from "../components/IdeaFeed";
  * 4. Torgmötes-flödet (IdeaFeed)
  */
 export default function DashboardPage() {
-    const router = useRouter();
     const currentUser = useQuery(api.users.getCurrentUser);
-
-    // Redirecta admin-användare till admin-dashboard
-    useEffect(() => {
-        if (currentUser?.role === "admin") {
-            router.push("/admin");
-        }
-    }, [currentUser, router]);
 
     // ── State för collapsible IdeaForm ─────────────────────────
     // Förenklad state: "idea" | "poll" | null
@@ -49,6 +41,17 @@ export default function DashboardPage() {
                         Vad vill du förbättra på stationen idag?
                     </p>
                 </section>
+
+                {/* ── Admin-länk (visas bara för admins) ───────────────── */}
+                {currentUser?.role === "admin" && (
+                    <Link
+                        href="/admin"
+                        className="flex items-center justify-between gap-3 rounded-xl border border-purple-200 bg-purple-50 px-5 py-3 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+                    >
+                        <span>⚙️ Gå till Admin-panelen</span>
+                        <span className="text-purple-400">→</span>
+                    </Link>
+                )}
 
                 {/* ── 3. Ny idé – Collapsible ──────────────────────────── */}
                 <section className="space-y-4">
@@ -123,16 +126,7 @@ export default function DashboardPage() {
                     )}
                 </section>
 
-                {/* ── 4. Avdelare ──────────────────────────────────────── */}
-                <div className="flex items-center gap-4">
-                    <div className="flex-1 h-px bg-slate-200" />
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                        <span>🏛️</span> Stationens Torgmöte
-                    </h3>
-                    <div className="flex-1 h-px bg-slate-200" />
-                </div>
-
-                {/* ── 5. Flödet ────────────────────────────────────────── */}
+                {/* ── 4. Flödet ────────────────────────────────────────── */}
                 <IdeaFeed />
             </main>
 
