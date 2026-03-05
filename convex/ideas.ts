@@ -97,13 +97,13 @@ export const getIdeas = query({
                 return false;
             }
 
-            // Hantera "Completed" vs "Active"
+            // Hantera "Completed/Rejected" vs "Active"
             if (args.showCompleted) {
-                // Om vi vill se genomförda: Visa ENDAST completed
-                if (idea.status !== "completed") return false;
+                // Om vi vill se genomförda: Visa ENDAST completed eller rejected
+                if (idea.status !== "completed" && idea.status !== "rejected") return false;
             } else {
-                // Default (Pågående): Visa INTE completed
-                if (idea.status === "completed") return false;
+                // Default (Pågående): Visa INTE completed eller rejected
+                if (idea.status === "completed" || idea.status === "rejected") return false;
             }
 
             // 1. Grundkoll: Får användaren se idén överhuvudtaget?
@@ -310,5 +310,60 @@ export const approveIdea = mutation({
         }
 
         await ctx.db.patch(args.ideaId, { status: "approved" });
+    },
+});
+
+/**
+ * rejectIdea – Chefen avslår en idé/omröstning.
+ *
+ * Flyttar idén till "rejected" och spara anledningen.
+ * Skickar en notis till förslagets skapare.
+ */
+export const rejectIdea = mutation({
+    args: {
+        ideaId: v.id("ideas"),
+        reason: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Du måste vara inloggad.");
+        }
+
+        const idea = await ctx.db.get(args.ideaId);
+        if (!idea) throw new Error("Idén hittades inte.");
+
+        if (idea.status !== "voting") {
+            throw new Error("Ett förslag kan bara avslås under omröstningsfasen.");
+        }
+
+        // ── Security Check ────────────────────────────────────────
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+            .unique();
+
+        if (!user) throw new Error("Användare ej funnen.");
+
+        const isManager = ["station_manager", "area_manager", "region_manager", "admin"].includes(user.role);
+        if (!isManager) {
+            throw new Error("Endast chefer har behörighet att avslå idéer.");
+        }
+
+        // ── Uppdatera status ──────────────────────────────────────
+        await ctx.db.patch(args.ideaId, {
+            status: "rejected",
+            rejectionReason: args.reason
+        });
+
+        // ── Skicka notis till skaparen ────────────────────────────
+        await ctx.scheduler.runAfter(0, internal.notifications.sendNotification, {
+            userIds: [idea.authorId],
+            type: "status_change",
+            title: `Ditt förslag: ${idea.title} har avslagits`,
+            message: `Anledning: ${args.reason}`,
+            link: `/?ideaId=${idea._id}`, // Eller var man nu läser mer
+            relatedId: idea._id,
+        });
     },
 });

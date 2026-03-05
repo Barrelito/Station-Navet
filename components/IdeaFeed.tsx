@@ -210,6 +210,7 @@ type Idea = {
     description: string;
     perfectState?: string;
     resourceNeeds?: string;
+    rejectionReason?: string;
     status: string;
     votesCount: number;
     targetAudience: string; // T.ex. "Norrtälje", "Roslagen", "Nord"
@@ -239,6 +240,10 @@ function StatusBadge({ status }: { status: string }) {
         completed: {
             label: "Klart!",
             style: "bg-green-100 text-green-700 border-green-200",
+        },
+        rejected: {
+            label: "Avslagen",
+            style: "bg-rose-100 text-rose-700 border-rose-200",
         },
     };
 
@@ -415,15 +420,17 @@ function IdeaCard({
                 </div>
             )}
 
-            {/* Voting (för chefer), Approved, Workshop, Completed → WorkshopCard */}
+            {/* Voting (för chefer), Approved, Workshop, Completed, Rejected → WorkshopCard */}
             {(idea.status === "voting" ||
                 idea.status === "approved" ||
                 idea.status === "workshop" ||
-                idea.status === "completed") && (
+                idea.status === "completed" ||
+                idea.status === "rejected") && (
                     <WorkshopCard
                         ideaId={idea._id}
                         ideaStatus={idea.status}
                         currentUser={currentUser}
+                        rejectReason={idea.rejectionReason}
                     />
                 )}
         </div>

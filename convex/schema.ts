@@ -54,10 +54,12 @@ export default defineSchema({
       v.literal("proposal"),
       v.literal("voting"),
       v.literal("approved"),
+      v.literal("rejected"),
       v.literal("workshop"),
       v.literal("completed"),
       v.literal("archived"),
     ),
+    rejectionReason: v.optional(v.string()),
     votesCount: v.number(),      // Denormaliserat för snabb sortering
     targetAudience: v.string(),  // T.ex. "Norrtälje", "Roslagen", "Nord"
     scope: v.union(

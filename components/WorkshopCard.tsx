@@ -18,10 +18,12 @@ export default function WorkshopCard({
     ideaId,
     ideaStatus,
     currentUser,
+    rejectReason,
 }: {
     ideaId: Id<"ideas">;
     ideaStatus: string;
     currentUser: any;
+    rejectReason?: string;
 }) {
     // ── Hämta task kopplad till idén ────────────────────────────
     const task = useQuery(api.tasks.getTaskByIdeaId, { ideaId });
@@ -31,11 +33,14 @@ export default function WorkshopCard({
     const completeTask = useMutation(api.tasks.completeTask);
     const giveHighFive = useMutation(api.tasks.giveHighFive);
     const approveIdea = useMutation(api.ideas.approveIdea);
+    const rejectIdea = useMutation(api.ideas.rejectIdea);
 
     // ── UI state ───────────────────────────────────────────────
     const [loading, setLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
+    const [showRejectForm, setShowRejectForm] = useState(false);
+    const [rejectionReasonInput, setRejectionReasonInput] = useState("");
 
     // ── Generisk action-handler ────────────────────────────────
     const handleAction = async (
@@ -83,28 +88,92 @@ export default function WorkshopCard({
                             Beslut krävs
                         </span>
                     </div>
-                    <button
-                        onClick={() =>
-                            handleAction("approve", () => approveIdea({ ideaId }), "Idén är godkänd! 🎉")
-                        }
-                        disabled={loading !== null}
-                        className="w-full rounded-xl bg-indigo-50 border border-indigo-200
-                       px-4 py-3 text-sm font-semibold text-indigo-700
-                       hover:bg-indigo-100 active:scale-[0.98]
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       transition-all duration-200"
-                    >
-                        {loading === "approve" ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <Spinner /> Godkänner...
-                            </span>
-                        ) : (
-                            "🔓 Godkänn idén (Chef)"
-                        )}
-                    </button>
-                    <p className="text-xs text-slate-400 text-center">
-                        Endast synligt för chefer
-                    </p>
+                    {!showRejectForm ? (
+                        <div className="flex flex-col gap-2">
+                            <button
+                                onClick={() =>
+                                    handleAction("approve", () => approveIdea({ ideaId }), "Idén är godkänd! 🎉")
+                                }
+                                disabled={loading !== null}
+                                className="w-full rounded-xl bg-indigo-50 border border-indigo-200
+                               px-4 py-3 text-sm font-semibold text-indigo-700
+                               hover:bg-indigo-100 active:scale-[0.98]
+                               disabled:opacity-50 disabled:cursor-not-allowed
+                               transition-all duration-200"
+                            >
+                                {loading === "approve" ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <Spinner /> Godkänner...
+                                    </span>
+                                ) : (
+                                    "🔓 Godkänn idén (Chef)"
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setShowRejectForm(true)}
+                                disabled={loading !== null}
+                                className="w-full rounded-xl bg-rose-50 border border-rose-200
+                               px-4 py-3 text-sm font-semibold text-rose-700
+                               hover:bg-rose-100 active:scale-[0.98]
+                               disabled:opacity-50 disabled:cursor-not-allowed
+                               transition-all duration-200"
+                            >
+                                🚫 Avslå idén
+                            </button>
+                            <p className="text-xs text-slate-400 text-center mt-2">
+                                Endast synligt för chefer
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3 p-4 bg-rose-50 border border-rose-200 rounded-xl">
+                            <h4 className="text-sm font-semibold text-rose-800">Avslå förslag</h4>
+                            <textarea
+                                value={rejectionReasonInput}
+                                onChange={(e) => setRejectionReasonInput(e.target.value)}
+                                placeholder="Ange en anledning till varför förslaget avslås. Detta skickas som notis till skaparen."
+                                className="w-full p-3 py-2 text-sm border-rose-200 rounded-lg focus:ring-rose-500 focus:border-rose-500 bg-white"
+                                rows={3}
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleAction("reject", () => rejectIdea({ ideaId, reason: rejectionReasonInput }), "Förslaget har avslagits. 🚫")}
+                                    disabled={loading !== null || rejectionReasonInput.trim().length === 0}
+                                    className="flex-1 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50 transition-all shadow-sm"
+                                >
+                                    {loading === "reject" ? <Spinner /> : "Bekräfta avslag"}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowRejectForm(false);
+                                        setRejectionReasonInput("");
+                                    }}
+                                    disabled={loading !== null}
+                                    className="flex-1 rounded-lg bg-white border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-all shadow-sm"
+                                >
+                                    Avbryt
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ═══ STATUS: REJECTED → Visas för chefer/historik ═══════════════ */}
+            {ideaStatus === "rejected" && (
+                <div className="space-y-3">
+                    <div className="flex items-start gap-3 rounded-xl bg-rose-50 border border-rose-200 p-4">
+                        <div className="text-xl mt-1">🚫</div>
+                        <div>
+                            <p className="text-sm font-semibold text-rose-800">
+                                Förslaget har avslagits
+                            </p>
+                            {rejectReason && (
+                                <p className="text-xs text-rose-700 mt-1 italic">
+                                    "{rejectReason}"
+                                </p>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 
