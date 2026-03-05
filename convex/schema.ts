@@ -115,6 +115,7 @@ export default defineSchema({
       v.literal("in_progress"),
       v.literal("done"),
     ),
+    completionReport: v.optional(v.string()), // Lades till för att spara slutrapport.
     highFives: v.array(v.id("users")), // Kollegor som ger beröm 🖐️
   })
     .index("by_idea", ["ideaId"])

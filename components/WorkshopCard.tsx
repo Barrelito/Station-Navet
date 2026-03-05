@@ -41,6 +41,8 @@ export default function WorkshopCard({
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [showRejectForm, setShowRejectForm] = useState(false);
     const [rejectionReasonInput, setRejectionReasonInput] = useState("");
+    const [showCompleteForm, setShowCompleteForm] = useState(false);
+    const [completionReportInput, setCompletionReportInput] = useState("");
 
     // ── Generisk action-handler ────────────────────────────────
     const handleAction = async (
@@ -233,30 +235,56 @@ export default function WorkshopCard({
 
                     {/* Markera som färdig: Visa bara för ägaren eller chef/admin */}
                     {task && (currentUser?._id === task.ownerId || ["station_manager", "area_manager", "region_manager", "admin"].includes(currentUser?.role)) && (
-                        <button
-                            onClick={() =>
-                                handleAction(
-                                    "complete",
-                                    () => completeTask({ taskId: task._id }),
-                                    "Fantastiskt! Uppgiften är klar! 🎉"
-                                )
-                            }
-                            disabled={loading !== null}
-                            className="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600
-                         px-4 py-3 text-sm font-bold text-white shadow-md
-                         hover:from-violet-600 hover:to-purple-700
-                         active:scale-[0.98]
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         transition-all duration-200"
-                        >
-                            {loading === "complete" ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <Spinner /> Markerar som klar...
-                                </span>
-                            ) : (
-                                "✅ Markera som färdig"
-                            )}
-                        </button>
+                        !showCompleteForm ? (
+                            <button
+                                onClick={() => setShowCompleteForm(true)}
+                                disabled={loading !== null}
+                                className="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600
+                             px-4 py-3 text-sm font-bold text-white shadow-md
+                             hover:from-violet-600 hover:to-purple-700
+                             active:scale-[0.98]
+                             disabled:opacity-50 disabled:cursor-not-allowed
+                             transition-all duration-200"
+                            >
+                                ✅ Markera som färdig
+                            </button>
+                        ) : (
+                            <div className="space-y-3 p-4 bg-purple-50 border border-purple-200 rounded-xl mt-3">
+                                <h4 className="text-sm font-semibold text-purple-800">Avslutrapport</h4>
+                                <textarea
+                                    value={completionReportInput}
+                                    onChange={(e) => setCompletionReportInput(e.target.value)}
+                                    placeholder="Skriv en kort sammanfattning av vad du har gjort..."
+                                    className="w-full p-3 py-2 text-sm border-purple-200 rounded-lg focus:ring-purple-500 focus:border-purple-500 bg-white"
+                                    rows={3}
+                                />
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() =>
+                                            handleAction(
+                                                "complete",
+                                                () => completeTask({ taskId: task._id, completionReport: completionReportInput }),
+                                                "Fantastiskt! Uppgiften är klar! 🎉"
+                                            )
+                                        }
+                                        disabled={loading !== null || completionReportInput.trim().length === 0}
+                                        className="flex-1 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50 transition-all shadow-sm"
+                                    >
+                                        {loading === "complete" ? <Spinner /> : "Spara & Markera klar"}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowCompleteForm(false);
+                                            setCompletionReportInput("");
+                                        }}
+                                        disabled={loading !== null}
+                                        className="flex-1 rounded-lg bg-white border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-all shadow-sm"
+                                    >
+                                        Avbryt
+                                    </button>
+                                </div>
+                            </div>
+                        )
                     )}
                 </div>
             )}
@@ -274,6 +302,18 @@ export default function WorkshopCard({
                             </p>
                         )}
                     </div>
+
+                    {/* Slutrapport-visning */}
+                    {task?.completionReport && (
+                        <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                                📝 Avslutrapport
+                            </h4>
+                            <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                                {task.completionReport}
+                            </p>
+                        </div>
+                    )}
 
                     {/* High-five-räknare + knapp */}
                     {task && (

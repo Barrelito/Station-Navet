@@ -107,6 +107,7 @@ export const claimTask = mutation({
 export const completeTask = mutation({
     args: {
         taskId: v.id("tasks"),
+        completionReport: v.string(),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -135,8 +136,15 @@ export const completeTask = mutation({
             throw new Error("Endast den som äger uppgiften kan markera den som klar.");
         }
 
-        // Markera task som klar
-        await ctx.db.patch(args.taskId, { status: "done" });
+        if (args.completionReport.trim().length === 0) {
+            throw new Error("Du måste skriva en kort rapport om vad du har gjort.");
+        }
+
+        // Markera task som klar och spara rapporten
+        await ctx.db.patch(args.taskId, {
+            status: "done",
+            completionReport: args.completionReport
+        });
 
         // Flytta idén till "completed"
         await ctx.db.patch(task.ideaId, { status: "completed" });
