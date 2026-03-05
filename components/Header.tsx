@@ -5,6 +5,7 @@ import { UserButton } from "@clerk/nextjs";
 import { useMutation, useConvexAuth } from "convex/react";
 import { api } from "../convex/_generated/api";
 import StationSelector from "./StationSelector";
+import OnboardingGuide from "./OnboardingGuide";
 import NotificationBell from "./NotificationBell";
 import Link from "next/link";
 
@@ -36,6 +37,9 @@ export default function Header() {
         <>
             {/* StationSelector visas automatiskt om användaren saknar station */}
             <StationSelector />
+
+            {/* OnboardingGuide visas om användaren har en station men inte sett guiden */}
+            <OnboardingGuide />
 
             <header
                 className="sticky top-0 z-50 w-full border-b border-slate-200/60

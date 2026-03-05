@@ -88,3 +88,31 @@ export const updateUserStation = mutation({
         return user._id;
     },
 });
+
+/**
+ * markOnboardingSeen – Skriver i DB att användaren klickat igenom Onboarding-guiden.
+ */
+export const markOnboardingSeen = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Du måste vara inloggad.");
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+            .unique();
+
+        if (!user) {
+            throw new Error("Användarprofil saknas.");
+        }
+
+        await ctx.db.patch(user._id, {
+            hasSeenOnboarding: true,
+        });
+
+        return user._id;
+    },
+});

@@ -18,6 +18,7 @@ export default defineSchema({
     station: v.optional(v.string()), // Optional - tom vid första inloggning
     area: v.optional(v.string()),    // För area_manager - direkt tilldelat område
     region: v.optional(v.string()),  // För region_manager - direkt tilldelad region
+    hasSeenOnboarding: v.optional(v.boolean()), // Har användaren sett guiden?
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_station", ["station"]),
